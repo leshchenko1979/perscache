@@ -3,9 +3,11 @@ from persistentcache import Cache
 import persistentcache
 from persistentcache.storage import LocalFileStorage
 
+
 @pytest.fixture
 def cache(tmp_path):
     return Cache(storage=LocalFileStorage(tmp_path))
+
 
 def test_basic(cache):
 
@@ -21,6 +23,7 @@ def test_basic(cache):
     get_data()
 
     assert counter == 1
+
 
 def test_arg_change(cache):
 
@@ -44,24 +47,25 @@ def test_arg_change(cache):
 
 def test_body_change(cache):
 
-        global_key = None
+    global_key = None
 
-        @cache.cache()
-        def get_data(key):
-            nonlocal global_key
-            global_key = key
-            return key
+    @cache.cache()
+    def get_data(key):
+        nonlocal global_key
+        global_key = key
+        return key
 
-        hash1 = persistentcache.cache.body_arg_hash(get_data, None, None)
+    hash1 = persistentcache.cache.body_arg_hash(get_data, None, None)
 
-        @cache.cache()
-        def get_data(key):
-            print("This function has been changed...")
-            return key
+    @cache.cache()
+    def get_data(key):
+        print("This function has been changed...")
+        return key
 
-        hash2 = persistentcache.cache.body_arg_hash(get_data, None, None)
+    hash2 = persistentcache.cache.body_arg_hash(get_data, None, None)
 
-        assert hash1 != hash2
+    assert hash1 != hash2
+
 
 def test_ignore_args(cache):
 
