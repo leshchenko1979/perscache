@@ -1,7 +1,7 @@
 import pytest
-from persistentcache import Cache
-import persistentcache
-from persistentcache.storage import LocalFileStorage
+from perscache import Cache
+import perscache
+from perscache.storage import LocalFileStorage
 
 
 @pytest.fixture
@@ -55,14 +55,14 @@ def test_body_change(cache):
         global_key = key
         return key
 
-    hash1 = persistentcache.cache.body_arg_hash(get_data, None, None)
+    hash1 = perscache.cache.body_arg_hash(get_data, None, None)
 
     @cache.cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = persistentcache.cache.body_arg_hash(get_data, None, None)
+    hash2 = perscache.cache.body_arg_hash(get_data, None, None)
 
     assert hash1 != hash2
 
