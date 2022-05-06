@@ -1,5 +1,3 @@
-from typing import Counter
-
 import pytest
 from perscache import Cache
 from perscache.serializers import JSONSerializer, PickleSerializer

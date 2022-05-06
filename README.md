@@ -120,7 +120,28 @@ def get_data(key):
     ...
 ```
 
-### Inspect cached results
+### Alternating cache settings depending on the environment
+```python
+import os
+
+from perscache import Cache, NoCache
+from perscache.storage import LocalFileStorage
+
+if os.environ.get["DEBUG"]:
+    cache = NoCache()
+else:
+    cache_location = (
+        "gs://bucket/folder"
+        if os.environ.get["GOOGLE_PROJECT_NAME"]
+        else cache_location = "/tmp/cache"
+    )
+    cache = LocalFileStorage(location=cache_location)
+
+@cache.cache()
+def function():
+    ...
+```
+### Inspecting cached results
 When using `LocalFileStorage(location=...)`, the files are put into the directory specified by the `location` parameter.
 
 The files are named like `<function_name>-<hash>.<serializer_extension>`, e.g. `get_data-9bf10a401d3d785317b2b35bcb5be1f2.json`.
