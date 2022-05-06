@@ -1,4 +1,9 @@
 # persistentcache
+
+![](https://img.shields.io/pypi/dm/persistentcache.svg?maxAge=2592000)
+![](https://img.shields.io/pypi/v/persistentcache.svg?maxAge=2592000)
+![](https://img.shields.io/pypi/l/persistentcache.svg?maxAge=2592000)
+
 An easy to use decorator for persistent memoization: like `functools.lrucache`, but results persist between runs and can be stored in any format to any storage.
 
 ## Use cases
