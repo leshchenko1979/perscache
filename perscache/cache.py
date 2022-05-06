@@ -17,6 +17,10 @@ def hash_it(*data) -> str:
     return result.hexdigest()
 
 
+def is_async(fn):
+    return inspect.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn)
+
+
 class Cache:
     def __init__(self, serializer: Serializer = None, storage: Storage = None):
         self.serializer = serializer or PickleSerializer()
@@ -31,10 +35,6 @@ class Cache:
     def set(key: str, value: Any, serializer: Serializer, storage: Storage) -> None:
         data = serializer.dumps(value)
         storage.write(key, data)
-
-    @staticmethod
-    def is_async(fn):
-        return inspect.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn)
 
     @staticmethod
     def get_key(
@@ -87,6 +87,37 @@ class Cache:
                     self.set(key, value, ser, stor)
                     return value
 
-            return async_wrapper if self.is_async(fn) else non_async_wrapper
+            return async_wrapper if is_async(fn) else non_async_wrapper
+
+        return decorator
+
+
+class NoCache:
+    """A class used to turn off caching.
+
+    Example:
+    ```
+    cache = NoCache() if os.environ["DEBUG"] else Cache()
+
+    @cache.cache
+    def function():
+        ...
+    ```
+    """
+
+    @staticmethod
+    def cache(*decorator_args, **decorator_kwargs):
+        """Just returns the results of the decorated function without any caching."""
+
+        def decorator(fn):
+            @functools.wraps(fn)
+            def non_async_wrapper(*args, **kwargs):
+                return fn(*args, **kwargs)
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args, **kwargs):
+                return await fn(*args, **kwargs)
+
+            return async_wrapper if is_async(fn) else non_async_wrapper
 
         return decorator

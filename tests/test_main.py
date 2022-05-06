@@ -1,5 +1,6 @@
 import pytest
 from perscache import Cache
+from perscache.cache import NoCache
 from perscache.serializers import JSONSerializer, PickleSerializer
 from perscache.storage import LocalFileStorage
 
@@ -103,3 +104,20 @@ def test_ignore_args(cache):
     # using the cache although the `ignore_this` arg has changed
     get_data("abc", ignore_this="ignore_2")
     assert counter == 1
+
+
+def test_no_cache():
+    counter = 0
+
+    cache = NoCache()
+
+    @cache.cache()
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    get_data()
+    get_data()
+
+    assert counter == 2
