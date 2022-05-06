@@ -5,12 +5,13 @@ from pathlib import Path
 class Storage(ABC):
     @abstractmethod
     def read(self, path: str) -> bytes:
-        """Reads the file at the given path and returns its contents as bytes.
-        If the file does not exist, raises FileNotFoundError."""
+        """Read the file at the given path and return its contents as bytes.
+        If the file does not exist, raise FileNotFoundError."""
         ...
 
     @abstractmethod
     def write(self, path: str, data: bytes) -> None:
+        """Write the file at the given path."""
         ...
 
 
@@ -43,7 +44,8 @@ class LocalFileStorage(Storage):
             self.location.iterdir(), key=lambda f: f.stat().st_atime, reverse=True
         )
 
-        # find the set of most recently accessed files whose total size is smaller than the target size
+        # find the set of most recently accessed files whose total size
+        # is smaller than the target size
         i, size = 0, 0
         while size < target_size and i < len(files):
             size += files[i].stat().st_size
