@@ -128,10 +128,14 @@ The files are named like `<function_name>-<hash>.<serializer_extension>`, e.g. `
 ### Automatic cleanup
 When using `LocalFileStorage(max_size=...)`, the least recently used cache entries are automatically removed to keep the total cache size with the `max_size` limit.
 
-### Make your own serialization and storage backends
+## Make your own serialization and storage backends
+Although you can use the standard `PickleSerializer()` for almost any type of data, sometimes you want to inspect the results of a decorated function by lookin into the cache files. This requires the data to be serialized in a text-based format. But the included text-based serializers (`JSONSerializer()`, `YAMLSerializer()`, `CSVSerializer()`) sometimes cannot process omplex objects. 
+
+That's when making your own serializer comes in handy.
+
 To do this, you should:
-1. Derive your own serialization or storage classes from the abstract `Serializer` and `Storage` classes and override the abstract methods. For the serialization classes, you should also provide the `extension` class variable that specifies the file extension.
-2. Use your serialization or storage classes with the `Cache` class.
+1. Derive your own serialization classe from the abstract `Serializer` class and override the abstract methods. You should also provide the `extension` class variable that specifies the file extension.
+2. Use your class with the `Cache` class.
 
 ```python
 class MySerializer(Serializer):
@@ -144,6 +148,11 @@ class MySerializer(Serializer):
     def loads(self, data):
         ...
 
+cache = Cache(serializer=MySerializer())
+```
+
+Making a custom storage backed is similar:
+```python
 class MyStorage(Storage):
     def read(self, filename):
         ...
@@ -151,5 +160,5 @@ class MyStorage(Storage):
     def write(self, filename, data):
         ...
 
-cache = Cache(serializer=MySerializer(), storage=MyStorage())
+cache = Cache(storage=MyStorage())
 ```
