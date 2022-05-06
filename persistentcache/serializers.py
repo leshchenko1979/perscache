@@ -4,7 +4,7 @@ from typing import Any
 
 class Serializer(ABC):
 
-    extension: str = None
+    extension = None
 
     @abstractmethod
     def dumps(self, data: Any) -> bytes:
