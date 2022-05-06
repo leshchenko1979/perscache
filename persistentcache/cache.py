@@ -10,13 +10,13 @@ def body_arg_hash(fn: callable, args: tuple, kwargs: dict) -> str:
     and its given arguments through hashing."""
     import hashlib
 
-    arg_hash = hashlib.md5()
+    result = hashlib.md5()
 
-    arg_hash.update(inspect.getsource(fn).encode("utf-8"))
-    arg_hash.update(str(args).encode("utf-8"))
-    arg_hash.update(str(kwargs).encode("utf-8"))
+    result.update(inspect.getsource(fn).encode("utf-8"))
+    result.update(str(args).encode("utf-8"))
+    result.update(str(kwargs).encode("utf-8"))
 
-    return arg_hash.hexdigest()
+    return result.hexdigest()
 
 
 class Cache:
@@ -48,7 +48,6 @@ class Cache:
     ) -> str:
         # Remove ignored arguments from the arguments tuple and kwargs dict
         if ignore is not None:
-            args = tuple(set(args) - set(ignore))
             kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
 
         return cache_fn(fn, args, kwargs)

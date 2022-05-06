@@ -47,7 +47,7 @@ def get_data():
     return "abc"
 
 print(get_data())  # the function is called
-# Fetching data
+# Fetching data...
 # abc
 
 print(get_data())  # the cache is used
@@ -86,18 +86,19 @@ print(get_data("abc"))  # the function has been called again
 
 ```
 ### Ignoring certain arguments
+By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed. **NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
 ```python
-@cache.cache(ignore_args=["key"])
+@cache.cache(ignore=["ignore_this"])
 def get_data(key, ignore_this):
     print("The function has been called...")
     return key
 
-print(get_data("abc", "ignore_1"))  # the function has been called
+print(get_data("abc", ignore_this="ignore_1"))  # the function has been called
 # The function has been called...
 # abc
 
 # using the cache although the the second argument is different
-print(get_data("abc", "ignore_2"))
+print(get_data("abc", ignore_this="ignore_2"))
 # abc
 ```
 
