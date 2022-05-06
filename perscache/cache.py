@@ -1,20 +1,18 @@
 import functools
+import hashlib
 import inspect
 from typing import Any
 
-from .serializers import Serializer, PickleSerializer
-from .storage import Storage, LocalFileStorage
+from .serializers import PickleSerializer, Serializer
+from .storage import LocalFileStorage, Storage
 
-def body_arg_hash(fn: callable, args: tuple, kwargs: dict) -> str:
-    """Returns a string that uniquely identifies the body of the function
-    and its given arguments through hashing."""
-    import hashlib
 
+def hash_it(*data) -> str:
+    """Hashes all the data passed to it as args."""
     result = hashlib.md5()
 
-    result.update(inspect.getsource(fn).encode("utf-8"))
-    result.update(str(args).encode("utf-8"))
-    result.update(str(kwargs).encode("utf-8"))
+    for datum in data:
+        result.update(str(datum).encode("utf-8"))
 
     return result.hexdigest()
 
@@ -40,24 +38,21 @@ class Cache:
 
     @staticmethod
     def get_key(
-        fn: callable,
-        args: tuple,
-        kwargs: dict,
-        cache_fn: callable,
-        ignore=None,
+        fn: callable, args: tuple, kwargs: dict, serializer: Serializer, ignore=None
     ) -> str:
+        """Get a cache key."""
+
         # Remove ignored arguments from the arguments tuple and kwargs dict
         if ignore is not None:
             kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
 
-        return cache_fn(fn, args, kwargs)
+        return hash_it(inspect.getsource(fn), type(serializer), args, kwargs)
 
     def get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
         return f"{fn.__name__}-{key}.{serializer.extension}"
 
     def cache(
         self,
-        cache_fn: callable = body_arg_hash,
         ignore=None,
         serializer: Serializer = None,
         storage: Storage = None,
@@ -72,7 +67,7 @@ class Cache:
 
             @functools.wraps(fn)
             def non_async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, cache_fn, ignore)
+                key = self.get_key(fn, args, kwargs, ser, ignore)
                 key = self.get_filename(fn, key, ser)
                 try:
                     return self.get(key, ser, stor)
@@ -83,7 +78,7 @@ class Cache:
 
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, cache_fn, ignore)
+                key = self.get_key(fn, args, kwargs, ser, ignore)
                 key = self.get_filename(fn, key, ser)
                 try:
                     return self.get(key, ser, stor)

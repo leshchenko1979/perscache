@@ -1,6 +1,8 @@
+from typing import Counter
+
 import pytest
 from perscache import Cache
-import perscache
+from perscache.serializers import JSONSerializer, PickleSerializer
 from perscache.storage import LocalFileStorage
 
 
@@ -45,26 +47,46 @@ def test_arg_change(cache):
     assert global_key == "fgh"
 
 
-def test_body_change(cache):
-
-    global_key = None
-
+def test_body_change(cache: Cache):
     @cache.cache()
     def get_data(key):
-        nonlocal global_key
-        global_key = key
         return key
 
-    hash1 = perscache.cache.body_arg_hash(get_data, None, None)
+    hash1 = cache.get_key(get_data, None, None, None)
 
     @cache.cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = perscache.cache.body_arg_hash(get_data, None, None)
+    hash2 = cache.get_key(get_data, None, None, None)
 
     assert hash1 != hash2
+
+
+def test_serializer_change(cache: Cache):
+
+    counter = 0
+
+    @cache.cache(serializer=PickleSerializer())
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    get_data()
+
+    # now, let's change the serializer
+
+    @cache.cache(serializer=JSONSerializer())
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    get_data()  # cache invalidated, the function should be called again
+
+    assert counter == 2
 
 
 def test_ignore_args(cache):
