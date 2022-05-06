@@ -6,6 +6,14 @@
 
 An easy to use decorator for persistent memoization: like `functools.lrucache`, but results persist between runs and can be stored in any format to any storage.
 
+- [Use cases](#use-cases)
+- [Features](#features)
+- [Installation](#installation)
+- [Examples](#examples)
+- [Make your own serialization and storage back-ends](#make-your-own-serialization-and-storage-backends)
+- [API Reference](#api-reference)
+
+
 ## Use cases
 - Cache the results of a function that uses a lot of resources: runs for a long time, consumes a lot of traffic, uses up paid API calls etc.
 - Speed up retreival of data that doesn't change often.
@@ -186,3 +194,60 @@ class MyStorage(Storage):
 
 cache = Cache(storage=MyStorage())
 ```
+
+## API Reference
+### class `Cache()`
+#### Parameters
+- `serializer (perscache.serializers.Serializer)`: a serializer class to use for cinverting stored data. Defaults to `perscache.serlializers.PickleSerializer`.
+
+- `storage (perscache.storage.Storage)`: a storage back-end used to save and load data. Defaults to `perscache.storage.LocalFileStorage`.
+
+#### decorator `Cache().cache()`
+Tries to find a cached result of the decorated function in persistent storage. Returns the saved result if it was found, or calls the decorated function and caches its result.
+
+The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
+##### Arguments
+- `ignore (Iterable[str])`: keyword arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
+
+- `serializer (perscache.serializers.Serializer)`: Overrides the default `Cache()` serializer. Defaults to `None`.
+
+- `storage (perscache.storage.Storage)`: Overrides the default `Cache()` storage. Defaults to `None`.
+
+### class `NoCache()`
+This class has no parameters. It is useful to [alternate cache behaviour depending on the environment](#alternating-cache-settings-depending-on-the-environment).
+#### decorator `NoCache().cache()`
+The underlying function will be called every time the decorated function has been called and no caching will take place.
+
+This decorator will ignore any parameters it has been given.
+### Serializers
+Serializers are imported from the `perscache.serializers` module.
+
+See also [how to make your own serializer](#make-your-own-serialization-and-storage-backends).
+#### class `perscache.serializers.JSONSerializer`
+Uses the `json` module.
+#### class `perscache.serializers.YAMLSerializer`
+Uses the `yaml` module.
+#### class `perscache.serializers.PickleSerializer`
+Uses the `pickle` module. It's the default serializer for the `Cache` class.
+#### class `perscache.serializers.CloudPickleSerializer`
+Uses the `cloudpickle` module. It's the most capable serializer of all, able to process most of the data types.
+#### class `perscache.serializers.CSVSerializer`
+Uses the `pandas` module. Processes `pandas.DataFrame` objects.
+#### class `perscache.serializers.ParquetSerializer`
+Uses the `pyarrow` module. Processes `pandas.DataFrame` objects.
+##### Parameters
+- `compression (str)`: compression used by `pyarrow` to save the data. Defaults to `"brotli"`.
+
+### Storage back-ends
+Storage back-ends are imported from the `perscache.serializers` module.
+
+See also [how to make your own storage back-end](#make-your-own-serialization-and-storage-backends).
+
+#### class `perscache.storage.LocalFileStorage`
+Keeps cache entries in separate files in a file system directory.
+
+This is the default storage class used by `Cache`.
+##### Parameters
+- `location (str)`: a directory to store the cache files. Defaults to `".cache"`.
+
+- `max_size (int)`: the maximum size for the cache. If set, then, before a new cache entry is written, the future size of the directory is calculated and the least recently used cache entries are removed. If `None`, the cache size grows indefinitely. Defaults to `None`.

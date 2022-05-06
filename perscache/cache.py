@@ -1,7 +1,7 @@
 import functools
 import hashlib
 import inspect
-from typing import Any
+from typing import Any, Iterable
 
 from .serializers import PickleSerializer, Serializer
 from .storage import LocalFileStorage, Storage
@@ -38,7 +38,11 @@ class Cache:
 
     @staticmethod
     def get_key(
-        fn: callable, args: tuple, kwargs: dict, serializer: Serializer, ignore=None
+        fn: callable,
+        args: tuple,
+        kwargs: dict,
+        serializer: Serializer,
+        ignore: Iterable[str],
     ) -> str:
         """Get a cache key."""
 
@@ -53,7 +57,7 @@ class Cache:
 
     def cache(
         self,
-        ignore=None,
+        ignore: Iterable[str] = None,
         serializer: Serializer = None,
         storage: Storage = None,
     ):
