@@ -1,9 +1,12 @@
-from calendar import c
+import collections
+import datetime as dt
+
+import pandas as pd
 import pytest
 from perscache import Cache
 from perscache.serializers import (
-    CSVSerializer,
     CloudPickleSerializer,
+    CSVSerializer,
     JSONSerializer,
     ParquetSerializer,
     PickleSerializer,
@@ -11,16 +14,11 @@ from perscache.serializers import (
 )
 from perscache.storage import LocalFileStorage
 
-import datetime as dt
-import collections
-import pandas as pd
-
 SERIALIZERS = {
     # human-readable
     "json": JSONSerializer,
     "yaml": YAMLSerializer,
     "csv": CSVSerializer,
-
     # binary
     "cloudpickle": CloudPickleSerializer,
     "pickle": PickleSerializer,
@@ -45,7 +43,6 @@ DATA = {
     "dict": {"a": 1, "b": 2, "c": 3},
     "tuple": (1, 2, 3),
     "object": collections.namedtuple("NamedTuple", ["a", "b", "c"])(1, 2, 3),
-
     # DATAFRAMES
     "dataframe_no_dates": pd.DataFrame(
         {
@@ -85,10 +82,10 @@ EXCLUSIONS = {
         "set",
         "tuple",
         "object",
-    } | DATAFRAMES,
+    }
+    | DATAFRAMES,
     YAMLSerializer: {"tuple", "object"} | DATAFRAMES,
     CSVSerializer: NON_DATAFRAMES | {"dataframe_with_dates"},
-
     # binary
     CloudPickleSerializer: {},
     PickleSerializer: {"object"},
