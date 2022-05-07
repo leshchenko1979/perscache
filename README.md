@@ -1,8 +1,7 @@
 # perscache
 
-![](https://img.shields.io/pypi/dm/perscache.svg?maxAge=2592000)
-![](https://img.shields.io/pypi/v/perscache.svg?maxAge=2592000)
-![](https://img.shields.io/pypi/l/perscache.svg?maxAge=2592000)
+![](https://github.com/leshchenko1979/perscache/workflows/build/badge.svg)
+![](https://img.shields.io/pypi/dm/perscache.svg)
 
 An easy to use decorator for persistent memoization: like `functools.lrucache`, but results persist between runs and can be stored in any format to any storage.
 
