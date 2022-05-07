@@ -228,9 +228,9 @@ Uses the `json` module.
 #### class `perscache.serializers.YAMLSerializer`
 Uses the `yaml` module.
 #### class `perscache.serializers.PickleSerializer`
-Uses the `pickle` module. It's the default serializer for the `Cache` class.
+Uses the `pickle` module.
 #### class `perscache.serializers.CloudPickleSerializer`
-Uses the `cloudpickle` module. It's the most capable serializer of all, able to process most of the data types.
+Uses the `cloudpickle` module. It's the most capable serializer of all, able to process most of the data types. It's the default serializer for the `Cache` class.
 #### class `perscache.serializers.CSVSerializer`
 Uses the `pandas` module. Processes `pandas.DataFrame` objects.
 #### class `perscache.serializers.ParquetSerializer`

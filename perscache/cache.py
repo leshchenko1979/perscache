@@ -3,7 +3,9 @@ import hashlib
 import inspect
 from typing import Any, Iterable
 
-from .serializers import PickleSerializer, Serializer
+import cloudpickle
+
+from .serializers import CloudPickleSerializer, Serializer
 from .storage import LocalFileStorage, Storage
 
 
@@ -12,7 +14,7 @@ def hash_it(*data) -> str:
     result = hashlib.md5()
 
     for datum in data:
-        result.update(str(datum).encode("utf-8"))
+        result.update(cloudpickle.dumps(datum))
 
     return result.hexdigest()
 
@@ -23,7 +25,7 @@ def is_async(fn):
 
 class Cache:
     def __init__(self, serializer: Serializer = None, storage: Storage = None):
-        self.serializer = serializer or PickleSerializer()
+        self.serializer = serializer or CloudPickleSerializer()
         self.storage = storage or LocalFileStorage()
 
     @staticmethod

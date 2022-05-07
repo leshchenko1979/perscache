@@ -1,7 +1,11 @@
 import pytest
 from perscache import Cache
 from perscache.cache import NoCache
-from perscache.serializers import JSONSerializer, PickleSerializer
+from perscache.serializers import (
+    CloudPickleSerializer,
+    JSONSerializer,
+    PickleSerializer,
+)
 from perscache.storage import LocalFileStorage
 
 
@@ -51,14 +55,14 @@ def test_body_change(cache: Cache):
     def get_data(key):
         return key
 
-    hash1 = cache.get_key(get_data, None, None, None)
+    hash1 = cache.get_key(get_data, None, None, None, None)
 
     @cache.cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = cache.get_key(get_data, None, None, None)
+    hash2 = cache.get_key(get_data, None, None, None, None)
 
     assert hash1 != hash2
 
@@ -121,3 +125,49 @@ def test_no_cache():
     get_data()
 
     assert counter == 2
+
+
+def data():
+    SIZE = 100_000
+
+    # long string
+    data1 = ["A"] * SIZE
+    data2 = data1.copy()
+    data2[SIZE // 2] = ["B"]
+
+    yield data1, data2
+
+    # long list
+    data1 = "A" * SIZE
+    middle = SIZE // 2
+    data2 = f"{data1[:middle]}B{data1[middle:]}"
+
+    yield data1, data2
+
+    # object with no repr() function
+    class Data:
+        pass
+
+    data1, data2 = Data(), Data()
+    data1.a = 1
+    data2.b = 2
+
+    # object with a non-changing repr()
+    class Data:
+        def __repr__(self):
+            return "This never changes"
+
+    data1, data2 = Data(), Data()
+    data1.a = 1
+    data2.b = 2
+
+    yield data1, data2
+
+
+def test_hash():
+    cache = Cache(serializer=CloudPickleSerializer())
+    for data1, data2 in data():
+        assert data1 != data2
+        assert cache.get_key(
+            lambda: None, (data1,), None, CloudPickleSerializer(), None
+        ) != cache.get_key(lambda: None, (data2,), None, CloudPickleSerializer(), None)
