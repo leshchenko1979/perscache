@@ -4,3 +4,4 @@ __pycache__
 .eggs
 *.egg-info
 *.ipynb
+.pytest*
