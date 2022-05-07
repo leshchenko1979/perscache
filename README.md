@@ -7,8 +7,7 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 
 - [Use cases](#use-cases)
 - [Features](#features)
-- [Installation](#installation)
-- [Examples](#examples)
+- [Getting started](#getting-started)
 - [Make your own serialization and storage back-ends](#make-your-own-serialization-and-storage-backends)
 - [API Reference](#api-reference)
 
@@ -35,12 +34,12 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
     - removed from storage when the total storage size exceeds a given threshold (_implemented_) or
     - limited to one result per function (_to be implemented soon_)
 
-## Installation
+## Getting started
+### Installation
 ```bash
 pip install perscache
 ```
 
-## Examples
 ### Basic usage
 ```python
 from perscache import Cache
