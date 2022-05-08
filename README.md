@@ -23,7 +23,7 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - Async functions supported.
 - Automatic cache invalidation when the decorated function arguments or code have been changed.
 - Time-to-live (TTL) support - automatically invalidate cache entries after a certain time.
-- You can ignore changes in certain arguments of the decorated function.
+- You can ignore changes in certain arguments of the decorated function or all of them.
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
 - Various storage backends:
     - local disk (_implemented_) or
@@ -108,7 +108,10 @@ def get_data():
     ...
 ```
 ### Ignoring certain arguments
-By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed. **NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
+By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed.
+
+**NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
+
 ```python
 @cache.cache(ignore=["ignore_this"])
 def get_data(key, ignore_this):
@@ -123,7 +126,7 @@ print(get_data("abc", ignore_this="ignore_1"))  # the function has been called
 print(get_data("abc", ignore_this="ignore_2"))
 # abc
 ```
-
+You can use `ignore_all` to ignore all arguments.
 ### Changing the default serialization format and storage backend
 ```python
 # set up serialization format and storage backend
@@ -222,6 +225,8 @@ Tries to find a cached result of the decorated function in persistent storage. R
 The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
 ##### Arguments
 - `ignore (Iterable[str])`: keyword arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
+
+- `ignore_all (bool)`: if `True`, all arguments will be ignored. Defaults to `False`.
 
 - `serializer (perscache.serializers.Serializer)`: Overrides the default `Cache()` serializer. Defaults to `None`.
 
