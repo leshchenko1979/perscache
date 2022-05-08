@@ -30,6 +30,23 @@ def test_basic(cache):
     assert counter == 1
 
 
+@pytest.mark.asyncio
+async def test_basic_async(cache):
+
+    counter = 0
+
+    @cache.cache()
+    async def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    await get_data()
+    await get_data()
+
+    assert counter == 1
+
+
 def test_arg_change(cache):
 
     global_key = None

@@ -1,3 +1,5 @@
+pytest-asyncio
+
 # serializers
 cloudpickle
 pyarrow
