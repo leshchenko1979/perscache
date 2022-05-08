@@ -1,7 +1,9 @@
 # perscache
 
 ![](https://github.com/leshchenko1979/perscache/workflows/build/badge.svg)
+[![codecov](https://codecov.io/gh/perscache/branch/main/graph/badge.svg)](https://codecov.io/gh/perscache)
 ![](https://img.shields.io/pypi/dm/perscache.svg)
+
 
 An easy to use decorator for persistent memoization: like `functools.lrucache`, but results persist between runs and can be stored in any format to any storage.
 
