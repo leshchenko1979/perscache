@@ -2,10 +2,11 @@ import datetime as dt
 import time
 
 from perscache import Cache
+from perscache.storage import LocalFileStorage
 
 
 def test_ttl(tmp_path):
-    cache = Cache()
+    cache = Cache(storage=LocalFileStorage(tmp_path))
 
     counter = 0
 

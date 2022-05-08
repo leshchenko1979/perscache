@@ -181,8 +181,10 @@ def data():
     yield data1, data2
 
 
-def test_hash():
-    cache = Cache(serializer=CloudPickleSerializer())
+def test_hash(tmp_path):
+    cache = Cache(
+        serializer=CloudPickleSerializer(), storage=LocalFileStorage(tmp_path)
+    )
     for data1, data2 in data():
         assert data1 != data2
         assert cache._get_key(
