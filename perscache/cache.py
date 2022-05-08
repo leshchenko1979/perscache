@@ -67,8 +67,23 @@ class Cache:
         storage: Storage = None,
         ttl: dt.timedelta = None,
     ):
-        """A method that returns a decorator that would wrap the passed in function
-        and cache its return value based on the first argument.
+        """Cache the value of the wrapped function.
+
+        Tries to find a cached result of the decorated function in persistent storage.
+        Returns the saved result if it was found, or calls the decorated function
+        and caches its result.
+
+        The cache will be invalidated if the function code, its argument values or
+        the cache serializer have been changed.
+
+        Args:
+            ignore: A list of argument names to ignore when hashing the function.
+            serializer: The serializer to use. If not specified, the default serializer is used.
+                    Defaults to None.
+            storage: The storage to use. If not specified, the default storage is used.
+                    Defaults to None.
+            ttl: The expiration time of the cache. If None, the cache will never expire.
+                    Defaults to None.
         """
 
         def decorator(fn):
@@ -119,7 +134,9 @@ class NoCache:
 
     @staticmethod
     def cache(*decorator_args, **decorator_kwargs):
-        """Just returns the results of the decorated function without any caching."""
+        """Will call the decorated function every time and
+        return its result without any caching.
+        """
 
         def decorator(fn):
             @functools.wraps(fn)
