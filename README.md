@@ -227,6 +227,8 @@ The cache will be invalidated if the function code, its argument values or the c
 
 - `storage (perscache.storage.Storage)`: Overrides the default `Cache()` storage. Defaults to `None`.
 
+- `ttl (datetime.timedelta)`: The time-to-live of the cache. If `None`, the cache never exprires. Defaults to `None`.
+
 ### class `NoCache()`
 This class has no parameters. It is useful to [alternate cache behaviour depending on the environment](#alternating-cache-settings-depending-on-the-environment).
 #### decorator `NoCache().cache()`
