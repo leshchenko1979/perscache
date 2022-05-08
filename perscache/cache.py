@@ -1,3 +1,4 @@
+import datetime as dt
 import functools
 import hashlib
 import inspect
@@ -6,7 +7,7 @@ from typing import Any, Iterable
 import cloudpickle
 
 from .serializers import CloudPickleSerializer, Serializer
-from .storage import LocalFileStorage, Storage
+from .storage import CacheExpired, LocalFileStorage, Storage
 
 
 def hash_it(*data) -> str:
@@ -29,8 +30,10 @@ class Cache:
         self.storage = storage or LocalFileStorage()
 
     @staticmethod
-    def get(key: str, serializer: Serializer, storage: Storage) -> Any:
-        data = storage.read(key)
+    def get(
+        key: str, serializer: Serializer, storage: Storage, deadline: dt.datetime
+    ) -> Any:
+        data = storage.read(key, deadline)
         return serializer.loads(data)
 
     @staticmethod
@@ -62,6 +65,7 @@ class Cache:
         ignore: Iterable[str] = None,
         serializer: Serializer = None,
         storage: Storage = None,
+        ttl: dt.timedelta = None,
     ):
         """A method that returns a decorator that would wrap the passed in function
         and cache its return value based on the first argument.
@@ -76,8 +80,9 @@ class Cache:
                 key = self.get_key(fn, args, kwargs, ser, ignore)
                 key = self.get_filename(fn, key, ser)
                 try:
-                    return self.get(key, ser, stor)
-                except FileNotFoundError:
+                    deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
+                    return self.get(key, ser, stor, deadline)
+                except (FileNotFoundError, CacheExpired):
                     value = fn(*args, **kwargs)
                     self.set(key, value, ser, stor)
                     return value
@@ -87,8 +92,9 @@ class Cache:
                 key = self.get_key(fn, args, kwargs, ser, ignore)
                 key = self.get_filename(fn, key, ser)
                 try:
-                    return self.get(key, ser, stor)
-                except FileNotFoundError:
+                    deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
+                    return self.get(key, ser, stor, deadline)
+                except (FileNotFoundError, CacheExpired):
                     value = await fn(*args, **kwargs)
                     self.set(key, value, ser, stor)
                     return value

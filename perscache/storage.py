@@ -1,12 +1,19 @@
+import datetime as dt
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 
+class CacheExpired(Exception):
+    ...
+
+
 class Storage(ABC):
     @abstractmethod
-    def read(self, path: str) -> bytes:
+    def read(self, path: str, deadline: dt.datetime) -> bytes:
         """Read the file at the given path and return its contents as bytes.
-        If the file does not exist, raise FileNotFoundError."""
+        If the file does not exist, raise FileNotFoundError. If the file is
+        older than the given deadline, raise CacheExpired.
+        """
         ...
 
     @abstractmethod
@@ -20,7 +27,12 @@ class LocalFileStorage(Storage):
         self.location = Path(location)
         self.max_size = max_size
 
-    def read(self, path: str) -> bytes:
+    def read(self, path: str, deadline: dt.datetime) -> bytes:
+        final_path = self.location / path
+
+        if deadline is not None and final_path.stat().st_mtime < deadline.timestamp():
+            raise CacheExpired
+
         with open(self.location / path, "rb") as f:
             return f.read()
 

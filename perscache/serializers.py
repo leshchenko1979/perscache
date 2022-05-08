@@ -10,6 +10,7 @@ class Serializer(ABC):
     def dumps(self, data: Any) -> bytes:
         ...
 
+    @abstractmethod
     def loads(self, data: bytes) -> Any:
         ...
 
