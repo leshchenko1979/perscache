@@ -48,12 +48,16 @@ class Cache:
         kwargs: dict,
         serializer: Serializer,
         ignore: Iterable[str],
+        ignore_all: bool,
     ) -> str:
         """Get a cache key."""
 
         # Remove ignored arguments from the arguments tuple and kwargs dict
         if ignore is not None:
             kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
+
+        if ignore_all:
+            args, kwargs = None, None
 
         return hash_it(inspect.getsource(fn), type(serializer), args, kwargs)
 
@@ -63,6 +67,7 @@ class Cache:
     def cache(
         self,
         ignore: Iterable[str] = None,
+        ignore_all: bool = False,
         serializer: Serializer = None,
         storage: Storage = None,
         ttl: dt.timedelta = None,
@@ -77,7 +82,7 @@ class Cache:
 
             @functools.wraps(fn)
             def non_async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, ser, ignore)
+                key = self.get_key(fn, args, kwargs, ser, ignore, ignore_all)
                 key = self.get_filename(fn, key, ser)
                 try:
                     deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
@@ -89,7 +94,7 @@ class Cache:
 
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, ser, ignore)
+                key = self.get_key(fn, args, kwargs, ser, ignore, ignore_all)
                 key = self.get_filename(fn, key, ser)
                 try:
                     deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None

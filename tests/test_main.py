@@ -72,14 +72,14 @@ def test_body_change(cache: Cache):
     def get_data(key):
         return key
 
-    hash1 = cache.get_key(get_data, None, None, None, None)
+    hash1 = cache.get_key(get_data, None, None, None, None, None)
 
     @cache.cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = cache.get_key(get_data, None, None, None, None)
+    hash2 = cache.get_key(get_data, None, None, None, None, None)
 
     assert hash1 != hash2
 
@@ -124,6 +124,23 @@ def test_ignore_args(cache):
 
     # using the cache although the `ignore_this` arg has changed
     get_data("abc", ignore_this="ignore_2")
+    assert counter == 1
+
+
+def test_ignore_all(cache):
+
+    counter = 0
+
+    @cache.cache(ignore_all=True)
+    def get_data(key1, key2):
+        nonlocal counter
+        counter += 1
+        return key1, key2
+
+    get_data("abc", "def")
+    assert counter == 1
+
+    get_data("def", "ghi")
     assert counter == 1
 
 
@@ -186,5 +203,7 @@ def test_hash():
     for data1, data2 in data():
         assert data1 != data2
         assert cache.get_key(
-            lambda: None, (data1,), None, CloudPickleSerializer(), None
-        ) != cache.get_key(lambda: None, (data2,), None, CloudPickleSerializer(), None)
+            lambda: None, (data1,), None, CloudPickleSerializer(), None, None
+        ) != cache.get_key(
+            lambda: None, (data2,), None, CloudPickleSerializer(), None, None
+        )
