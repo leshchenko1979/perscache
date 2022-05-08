@@ -20,19 +20,32 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - Inspect the results of a decorated function while debugging.
 
 ## Features
+### Caching
+- Easy to swap out the cache configuration when switching environments.
+
 - Async functions supported.
-- Automatic cache invalidation when the decorated function arguments or code have been changed.
+
 - Time-to-live (TTL) support - automatically invalidate cache entries after a certain time.
+
+- Automatic cache invalidation when the decorated function arguments or code have been changed.
+
 - You can ignore changes in certain arguments of the decorated function.
+
+### Serialization and storage
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
+
 - Various storage backends:
     - local disk (_implemented_) or
     - cloud storage (_to be implemented soon_).
-- You can set default serialization format and storage backend and then change them on a per-function basis.
-- You can easily add new serialization formats and storage back-ends.
+
 - Serialization and storage are separated into two different classes, so that you can mix various serialization formats and storage back-ends as you like - JSON to local storage, Pickle to AWS, Parquet to Google Cloud Storage etc.
-- Local storage is file-based, so you can easily inspect cached results.
-- Easy to swap out the storage back-end when switching environments.
+
+- You can set default serialization format and storage backend and then change them on a per-function basis.
+
+- You can easily add new serialization formats and storage back-ends.
+
+- Local storage is file-based, so you can use human-readable serialization (JSON, YAML, CSV) and inspect cached results.
+
 - Automatic cleanup: least recently used results can be removed from storage when the total storage size exceeds a given threshold.
 
 ## Getting started
