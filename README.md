@@ -20,9 +20,10 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - Inspect the results of a decorated function while debugging.
 
 ## Features
-- Async functions supported (unlike in `joblib`).
+- Async functions supported.
 - Automatic cache invalidation when the decorated function arguments or code have been changed.
-- You can set to ignore changes in certain arguments of the decorated function.
+- Time-to-live (TTL) support - automatically invalidate cache entries after a certain time.
+- You can ignore changes in certain arguments of the decorated function.
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
 - Various storage backends:
     - local disk (_implemented_) or
@@ -32,9 +33,7 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - Serialization and storage are separated into two different classes, so that you can mix various serialization formats and storage back-ends as you like - JSON to local storage, Pickle to AWS, Parquet to Google Cloud Storage etc.
 - Local storage is file-based, so you can easily inspect cached results.
 - Easy to swap out the storage back-end when switching environments.
-- Automatic cleanup: results can be
-    - removed from storage when the total storage size exceeds a given threshold (_implemented_) or
-    - limited to one result per function (_to be implemented soon_)
+- Automatic cleanup: least recently used results can be removed from storage when the total storage size exceeds a given threshold.
 
 ## Getting started
 ### Installation
@@ -97,6 +96,16 @@ print(get_data("abc"))  # the function has been called again
 # This function has been changed...
 # abc
 
+```
+### Setting the expiry time of the cache
+```python
+import datetime as dt
+
+@cache.cache(ttl=dt.timedelta(days=1))
+def get_data():
+    """This function will be cached for 1 day
+    and called again after this period expires."""
+    ...
 ```
 ### Ignoring certain arguments
 By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed. **NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
@@ -174,10 +183,10 @@ class MySerializer(Serializer):
 
     extension = "data"
 
-    def dumps(self, data):
+    def dumps(self, data: Any) -> bytes:
         ...
 
-    def loads(self, data):
+    def loads(self, data: bytes) -> Any:
         ...
 
 cache = Cache(serializer=MySerializer())
@@ -186,10 +195,15 @@ cache = Cache(serializer=MySerializer())
 Making a custom storage backed is similar:
 ```python
 class MyStorage(Storage):
-    def read(self, filename):
+    def read(self, path, deadline: datetime.datetime) -> bytes:
+        """Read the file at the given path and return its contents as bytes.
+        If the file does not exist, raise FileNotFoundError. If the file is
+        older than the given deadline, raise CacheExpired.
+        """
         ...
 
-    def write(self, filename, data):
+    def write(self, path, data: bytes) -> None:
+        """Write the file at the given path."""
         ...
 
 cache = Cache(storage=MyStorage())
