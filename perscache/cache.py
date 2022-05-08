@@ -1,3 +1,8 @@
+"""An easy to use decorator for persistent memoization.
+
+Like `functools.lrucache`, but results can be saved in any format to any storage.
+"""
+
 import datetime as dt
 import functools
 import hashlib
@@ -11,7 +16,7 @@ from .storage import CacheExpired, LocalFileStorage, Storage
 
 
 def hash_it(*data) -> str:
-    """Hashes all the data passed to it as args."""
+    """Pickles and hashes all the data passed to it as args."""
     result = hashlib.md5()
 
     for datum in data:
@@ -21,44 +26,23 @@ def hash_it(*data) -> str:
 
 
 def is_async(fn):
+    """Checks if the function is async."""
     return inspect.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn)
 
 
 class Cache:
+    """A cache that can be used to memoize functions."""
+
     def __init__(self, serializer: Serializer = None, storage: Storage = None):
+        """Initialize the cache.
+
+        Args:
+            serializer: The serializer to use. If not specified, CloudPickleSerializer is used.
+            storage: The storage to use. If not specified, LocalFileStorage is used.
+        """
+
         self.serializer = serializer or CloudPickleSerializer()
         self.storage = storage or LocalFileStorage()
-
-    @staticmethod
-    def get(
-        key: str, serializer: Serializer, storage: Storage, deadline: dt.datetime
-    ) -> Any:
-        data = storage.read(key, deadline)
-        return serializer.loads(data)
-
-    @staticmethod
-    def set(key: str, value: Any, serializer: Serializer, storage: Storage) -> None:
-        data = serializer.dumps(value)
-        storage.write(key, data)
-
-    @staticmethod
-    def get_key(
-        fn: callable,
-        args: tuple,
-        kwargs: dict,
-        serializer: Serializer,
-        ignore: Iterable[str],
-    ) -> str:
-        """Get a cache key."""
-
-        # Remove ignored arguments from the arguments tuple and kwargs dict
-        if ignore is not None:
-            kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
-
-        return hash_it(inspect.getsource(fn), type(serializer), args, kwargs)
-
-    def get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
-        return f"{fn.__name__}-{key}.{serializer.extension}"
 
     def cache(
         self,
@@ -86,37 +70,68 @@ class Cache:
                     Defaults to None.
         """
 
-        def decorator(fn):
+        def _decorator(fn):
             ser = serializer or self.serializer
             stor = storage or self.storage
 
             @functools.wraps(fn)
-            def non_async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, ser, ignore)
-                key = self.get_filename(fn, key, ser)
+            def _non_async_wrapper(*args, **kwargs):
+                key = self._get_key(fn, args, kwargs, ser, ignore)
+                key = self._get_filename(fn, key, ser)
                 try:
                     deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
-                    return self.get(key, ser, stor, deadline)
+                    return self._get(key, ser, stor, deadline)
                 except (FileNotFoundError, CacheExpired):
                     value = fn(*args, **kwargs)
-                    self.set(key, value, ser, stor)
+                    self._set(key, value, ser, stor)
                     return value
 
             @functools.wraps(fn)
-            async def async_wrapper(*args, **kwargs):
-                key = self.get_key(fn, args, kwargs, ser, ignore)
-                key = self.get_filename(fn, key, ser)
+            async def _async_wrapper(*args, **kwargs):
+                key = self._get_key(fn, args, kwargs, ser, ignore)
+                key = self._get_filename(fn, key, ser)
                 try:
                     deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
-                    return self.get(key, ser, stor, deadline)
+                    return self._get(key, ser, stor, deadline)
                 except (FileNotFoundError, CacheExpired):
                     value = await fn(*args, **kwargs)
-                    self.set(key, value, ser, stor)
+                    self._set(key, value, ser, stor)
                     return value
 
-            return async_wrapper if is_async(fn) else non_async_wrapper
+            return _async_wrapper if is_async(fn) else _non_async_wrapper
 
-        return decorator
+        return _decorator
+
+    @staticmethod
+    def _get(
+        key: str, serializer: Serializer, storage: Storage, deadline: dt.datetime
+    ) -> Any:
+        data = storage.read(key, deadline)
+        return serializer.loads(data)
+
+    @staticmethod
+    def _set(key: str, value: Any, serializer: Serializer, storage: Storage) -> None:
+        data = serializer.dumps(value)
+        storage.write(key, data)
+
+    @staticmethod
+    def _get_key(
+        fn: callable,
+        args: tuple,
+        kwargs: dict,
+        serializer: Serializer,
+        ignore: Iterable[str],
+    ) -> str:
+        """Get a cache key."""
+
+        # Remove ignored arguments from the arguments tuple and kwargs dict
+        if ignore is not None:
+            kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
+
+        return hash_it(inspect.getsource(fn), type(serializer), args, kwargs)
+
+    def _get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
+        return f"{fn.__name__}-{key}.{serializer.extension}"
 
 
 class NoCache:
@@ -138,15 +153,15 @@ class NoCache:
         return its result without any caching.
         """
 
-        def decorator(fn):
+        def _decorator(fn):
             @functools.wraps(fn)
-            def non_async_wrapper(*args, **kwargs):
+            def _non_async_wrapper(*args, **kwargs):
                 return fn(*args, **kwargs)
 
             @functools.wraps(fn)
-            async def async_wrapper(*args, **kwargs):
+            async def _async_wrapper(*args, **kwargs):
                 return await fn(*args, **kwargs)
 
-            return async_wrapper if is_async(fn) else non_async_wrapper
+            return _async_wrapper if is_async(fn) else _non_async_wrapper
 
-        return decorator
+        return _decorator

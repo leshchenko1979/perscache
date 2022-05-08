@@ -72,14 +72,14 @@ def test_body_change(cache: Cache):
     def get_data(key):
         return key
 
-    hash1 = cache.get_key(get_data, None, None, None, None)
+    hash1 = cache._get_key(get_data, None, None, None, None)
 
     @cache.cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = cache.get_key(get_data, None, None, None, None)
+    hash2 = cache._get_key(get_data, None, None, None, None)
 
     assert hash1 != hash2
 
@@ -185,6 +185,6 @@ def test_hash():
     cache = Cache(serializer=CloudPickleSerializer())
     for data1, data2 in data():
         assert data1 != data2
-        assert cache.get_key(
+        assert cache._get_key(
             lambda: None, (data1,), None, CloudPickleSerializer(), None
-        ) != cache.get_key(lambda: None, (data2,), None, CloudPickleSerializer(), None)
+        ) != cache._get_key(lambda: None, (data2,), None, CloudPickleSerializer(), None)

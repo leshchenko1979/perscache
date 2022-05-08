@@ -35,6 +35,6 @@ def test_no_path(tmp_path):
     assert not path.exists()
 
     cache = Cache(storage=LocalFileStorage(path))
-    cache.set("a", 1, cache.serializer, cache.storage)
+    cache._set("a", 1, cache.serializer, cache.storage)
 
     assert path.exists()
