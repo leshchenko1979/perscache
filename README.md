@@ -1,7 +1,7 @@
 # perscache
 
 ![](https://github.com/leshchenko1979/perscache/workflows/build/badge.svg)
-[![codecov](https://codecov.io/gh/perscache/branch/main/graph/badge.svg)](https://codecov.io/gh/perscache)
+[![codecov](https://codecov.io/gh/leshchenko1979/perscache/branch/master/graph/badge.svg?token=IVIIFN8NDU)](https://codecov.io/gh/leshchenko1979/perscache)
 ![](https://img.shields.io/pypi/dm/perscache.svg)
 
 
