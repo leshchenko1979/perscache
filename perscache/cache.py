@@ -44,6 +44,9 @@ class Cache:
         self.serializer = serializer or CloudPickleSerializer()
         self.storage = storage or LocalFileStorage()
 
+    def __repr__(self) -> str:
+        return f"<Cache(serializer={self.serializer}, storage={self.storage})>"
+
     def cache(
         self,
         ignore: Iterable[str] = None,
@@ -146,6 +149,9 @@ class NoCache:
         ...
     ```
     """
+
+    def __repr__(self) -> str:
+        return "<NoCache>"
 
     @staticmethod
     def cache(*decorator_args, **decorator_kwargs):

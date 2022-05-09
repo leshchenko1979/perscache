@@ -14,6 +14,12 @@ def cache(tmp_path):
     return Cache(storage=LocalFileStorage(tmp_path))
 
 
+def test_repr(cache):
+    assert "CloudPickleSerializer" in repr(cache.serializer)
+    assert "LocalFileStorage" in repr(cache.storage)
+    assert "Cache" in repr(cache)
+
+
 def test_basic(cache):
 
     counter = 0
@@ -23,8 +29,6 @@ def test_basic(cache):
         nonlocal counter
         counter += 1
         return "abc"
-
-    assert "CloudPickleSerializer" in repr(cache.serializer)
 
     get_data()
     get_data()
