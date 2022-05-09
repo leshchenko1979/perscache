@@ -12,7 +12,7 @@ class Serializer(ABC):
     extension: str = None
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(), extension='{self.extension}'"
+        return f"<{self.__class__.__name__}(extension='{self.extension}')>"
 
     @abstractmethod
     def dumps(self, data: Any) -> bytes:
@@ -88,6 +88,9 @@ class ParquetSerializer(Serializer):
 
     def __init__(self, compression: str = "brotli"):
         self.compression = compression
+
+    def __repr__(self):
+        return f"<ParquetSerializer(extentsion='parquet', compression='{self.compression}')>"
 
     def dumps(self, data: Any) -> bytes:
         import pyarrow

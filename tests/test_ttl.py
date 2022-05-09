@@ -10,7 +10,7 @@ def test_ttl(tmp_path):
 
     counter = 0
 
-    @cache.cache(ttl=dt.timedelta(seconds=0.1))
+    @cache(ttl=dt.timedelta(seconds=0.1))
     def get_data(key):
         nonlocal counter
         counter += 1

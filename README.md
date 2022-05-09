@@ -62,7 +62,7 @@ cache = Cache()
 
 counter = 0
 
-@cache.cache()
+@cache
 def get_data():
     print("Fetching data...")
 
@@ -84,7 +84,7 @@ print(counter)  # the function was called only once
 
 ### Changing parameters or the code of the function invalidates the cache
 ```python
-@cache.cache()
+@cache
 def get_data(key):
     print("The function has been called...")
     return key
@@ -100,7 +100,7 @@ print(get_data("fgh"))  # the function has been called again
 print(get_data("abc"))  # using the cache
 # abc
 
-@cache.cache()
+@cache
 def get_data(key):
     print("This function has been changed...")
     return key
@@ -114,7 +114,7 @@ print(get_data("abc"))  # the function has been called again
 ```python
 import datetime as dt
 
-@cache.cache(ttl=dt.timedelta(days=1))
+@cache(ttl=dt.timedelta(days=1))
 def get_data():
     """This function will be cached for 1 day
     and called again after this period expires."""
@@ -123,7 +123,7 @@ def get_data():
 ### Ignoring certain arguments
 By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed. **NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
 ```python
-@cache.cache(ignore=["ignore_this"])
+@cache(ignore=["ignore_this"])
 def get_data(key, ignore_this):
     print("The function has been called...")
     return key
@@ -145,7 +145,7 @@ cache = Cache(serializer=JSONSerializer(), storage=GCPStorage("bucket"))
 ...
 
 # change the default serialization format
-@cache.cache(serialization=PickleSerializer())
+@cache(serialization=PickleSerializer())
 def get_data(key):
     ...
 ```
@@ -167,7 +167,7 @@ else:
     )
     cache = LocalFileStorage(location=cache_location)
 
-@cache.cache()
+@cache
 def function():
     ...
 ```
@@ -220,7 +220,7 @@ PyrogramSerializer = make_serializer(
 
 cache = Cache(serializer=PyrogramSerializer())
 
-@cache.cache()
+@cache
 async def some_pyrogram_func() -> pyrogram.Message:
     ...
 ```
@@ -249,7 +249,7 @@ cache = Cache(storage=MyStorage())
 
 - `storage (perscache.storage.Storage)`: a storage back-end used to save and load data. Defaults to `perscache.storage.LocalFileStorage`.
 
-#### decorator `Cache().cache()`
+#### decorator `Cache().__call__()`
 Tries to find a cached result of the decorated function in persistent storage. Returns the saved result if it was found, or calls the decorated function and caches its result.
 
 The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
@@ -264,7 +264,7 @@ The cache will be invalidated if the function code, its argument values or the c
 
 ### class `NoCache()`
 This class has no parameters. It is useful to [alternate cache behaviour depending on the environment](#alternating-cache-settings-depending-on-the-environment).
-#### decorator `NoCache().cache()`
+#### decorator `NoCache().__call__()`
 The underlying function will be called every time the decorated function has been called and no caching will take place.
 
 This decorator will ignore any parameters it has been given.

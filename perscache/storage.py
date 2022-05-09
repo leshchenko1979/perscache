@@ -27,6 +27,9 @@ class LocalFileStorage(Storage):
         self.location = Path(location)
         self.max_size = max_size
 
+    def __repr__(self) -> str:
+        return f"<LocalFileStorage(location='{self.location}', max_size={self.max_size})>"
+
     def read(self, path: str, deadline: dt.datetime) -> bytes:
         final_path = self.location / path
 

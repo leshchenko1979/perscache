@@ -7,7 +7,7 @@ import datetime as dt
 import functools
 import hashlib
 import inspect
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 import cloudpickle
 
@@ -44,8 +44,13 @@ class Cache:
         self.serializer = serializer or CloudPickleSerializer()
         self.storage = storage or LocalFileStorage()
 
-    def cache(
+    def __repr__(self) -> str:
+        return f"<Cache(serializer={self.serializer}, storage={self.storage})>"
+
+    def __call__(
         self,
+        fn: callable = None,
+        *,
         ignore: Iterable[str] = None,
         serializer: Serializer = None,
         storage: Storage = None,
@@ -70,37 +75,14 @@ class Cache:
                     Defaults to None.
         """
 
-        def _decorator(fn):
-            ser = serializer or self.serializer
-            stor = storage or self.storage
+        wrapper = CachedFunction(
+            self, ignore, serializer or self.serializer, storage or self.storage, ttl
+        )
 
-            @functools.wraps(fn)
-            def _non_async_wrapper(*args, **kwargs):
-                key = self._get_key(fn, args, kwargs, ser, ignore)
-                key = self._get_filename(fn, key, ser)
-                try:
-                    deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
-                    return self._get(key, ser, stor, deadline)
-                except (FileNotFoundError, CacheExpired):
-                    value = fn(*args, **kwargs)
-                    self._set(key, value, ser, stor)
-                    return value
+        # The decorator should work both with and without parentheses
+        return wrapper if fn is None else wrapper(fn)
 
-            @functools.wraps(fn)
-            async def _async_wrapper(*args, **kwargs):
-                key = self._get_key(fn, args, kwargs, ser, ignore)
-                key = self._get_filename(fn, key, ser)
-                try:
-                    deadline = dt.datetime.now(dt.timezone.utc) - ttl if ttl else None
-                    return self._get(key, ser, stor, deadline)
-                except (FileNotFoundError, CacheExpired):
-                    value = await fn(*args, **kwargs)
-                    self._set(key, value, ser, stor)
-                    return value
-
-            return _async_wrapper if is_async(fn) else _non_async_wrapper
-
-        return _decorator
+    cache = __call__  # Alias for backwards compatibility.
 
     @staticmethod
     def _get(
@@ -116,7 +98,7 @@ class Cache:
 
     @staticmethod
     def _get_key(
-        fn: callable,
+        fn: Callable,
         args: tuple,
         kwargs: dict,
         serializer: Serializer,
@@ -147,8 +129,11 @@ class NoCache:
     ```
     """
 
+    def __repr__(self) -> str:
+        return "<NoCache>"
+
     @staticmethod
-    def cache(*decorator_args, **decorator_kwargs):
+    def __call__(*decorator_args, **decorator_kwargs):
         """Will call the decorated function every time and
         return its result without any caching.
         """
@@ -165,3 +150,62 @@ class NoCache:
             return _async_wrapper if is_async(fn) else _non_async_wrapper
 
         return _decorator
+
+    cache = __call__  # Alias for backwards compatibility.
+
+
+class CachedFunction:
+    """A class used as a wrapper."""
+
+    def __init__(
+        self,
+        cache: Cache,
+        ignore: Iterable[str],
+        serializer: Serializer,
+        storage: Storage,
+        ttl: dt.timedelta,
+    ):
+        self.cache = cache
+        self.ignore = ignore
+        self.serializer = serializer
+        self.storage = storage
+        self.ttl = ttl
+
+    def __repr__(self) -> str:
+        return (
+            f"<CachedFunction(cache={self.cache}, ignore={self.ignore}, "
+            "serializer={self.serializer}, storage={self.storage}, ttl={self.ttl})>"
+        )
+
+    def __call__(self, fn):
+        """Return the correct wrapper."""
+
+        @functools.wraps(fn)
+        def _non_async_wrapper(*args, **kwargs):
+            key = self.cache._get_key(fn, args, kwargs, self.serializer, self.ignore)
+            key = self.cache._get_filename(fn, key, self.serializer)
+            try:
+                deadline = (
+                    dt.datetime.now(dt.timezone.utc) - self.ttl if self.ttl else None
+                )
+                return self.cache._get(key, self.serializer, self.storage, deadline)
+            except (FileNotFoundError, CacheExpired):
+                value = fn(*args, **kwargs)
+                self.cache._set(key, value, self.serializer, self.storage)
+                return value
+
+        @functools.wraps(fn)
+        async def _async_wrapper(*args, **kwargs):
+            key = self.cache._get_key(fn, args, kwargs, self.serializer, self.ignore)
+            key = self.cache._get_filename(fn, key, self.serializer)
+            try:
+                deadline = (
+                    dt.datetime.now(dt.timezone.utc) - self.ttl if self.ttl else None
+                )
+                return self.cache._get(key, self.serializer, self.storage, deadline)
+            except (FileNotFoundError, CacheExpired):
+                value = await fn(*args, **kwargs)
+                self.cache._set(key, value, self.serializer, self.storage)
+                return value
+
+        return _async_wrapper if is_async(fn) else _non_async_wrapper

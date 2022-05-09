@@ -15,7 +15,7 @@ def test_max_size(tmp_path, max_size):
     initial_size = path.stat().st_size
     counter = 0
 
-    @cache.cache()
+    @cache()
     def get_data(key):
         nonlocal counter
         counter += 1

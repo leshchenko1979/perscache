@@ -14,7 +14,30 @@ def cache(tmp_path):
     return Cache(storage=LocalFileStorage(tmp_path))
 
 
+def test_repr(cache):
+    assert "CloudPickleSerializer" in repr(cache.serializer)
+    assert "LocalFileStorage" in repr(cache.storage)
+    assert "Cache" in repr(cache)
+    assert "NoCache" in repr(NoCache())
+
+
 def test_basic(cache):
+
+    counter = 0
+
+    @cache()
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    get_data()
+    get_data()
+
+    assert counter == 1
+
+
+def test_alias(cache):
 
     counter = 0
 
@@ -24,7 +47,21 @@ def test_basic(cache):
         counter += 1
         return "abc"
 
-    assert "CloudPickleSerializer" in repr(cache.serializer)
+    get_data()
+    get_data()
+
+    assert counter == 1
+
+
+def test_no_parens(cache):
+
+    counter = 0
+
+    @cache
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
 
     get_data()
     get_data()
@@ -37,7 +74,7 @@ async def test_basic_async(cache):
 
     counter = 0
 
-    @cache.cache()
+    @cache()
     async def get_data():
         nonlocal counter
         counter += 1
@@ -53,7 +90,7 @@ def test_arg_change(cache):
 
     global_key = None
 
-    @cache.cache()
+    @cache()
     def get_data(key):
         nonlocal global_key
         global_key = key
@@ -70,13 +107,13 @@ def test_arg_change(cache):
 
 
 def test_body_change(cache: Cache):
-    @cache.cache()
+    @cache()
     def get_data(key):
         return key
 
     hash1 = cache._get_key(get_data, None, None, None, None)
 
-    @cache.cache()
+    @cache()
     def get_data(key):
         print("This function has been changed...")
         return key
@@ -90,7 +127,7 @@ def test_serializer_change(cache: Cache):
 
     counter = 0
 
-    @cache.cache(serializer=PickleSerializer())
+    @cache(serializer=PickleSerializer())
     def get_data():
         nonlocal counter
         counter += 1
@@ -100,7 +137,7 @@ def test_serializer_change(cache: Cache):
 
     # now, let's change the serializer
 
-    @cache.cache(serializer=JSONSerializer())
+    @cache(serializer=JSONSerializer())
     def get_data():
         nonlocal counter
         counter += 1
@@ -115,7 +152,7 @@ def test_ignore_args(cache):
 
     counter = 0
 
-    @cache.cache(ignore=["ignore_this"])
+    @cache(ignore=["ignore_this"])
     def get_data(key, ignore_this):
         nonlocal counter
         counter += 1
@@ -134,7 +171,7 @@ def test_no_cache():
 
     cache = NoCache()
 
-    @cache.cache()
+    @cache()
     def get_data():
         nonlocal counter
         counter += 1
