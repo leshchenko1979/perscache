@@ -7,7 +7,6 @@ import datetime as dt
 import functools
 import hashlib
 import inspect
-from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
 import cloudpickle
@@ -154,7 +153,7 @@ class NoCache:
 
     cache = __call__  # Alias for backwards compatibility.
 
-@dataclass
+
 class CachedFunction:
     """A class used as a wrapper."""
 
@@ -172,8 +171,15 @@ class CachedFunction:
         self.storage = storage
         self.ttl = ttl
 
+    def __repr__(self) -> str:
+        return (
+            f"<CachedFunction(cache={self.cache}, ignore={self.ignore}, "
+            "serializer={self.serializer}, storage={self.storage}, ttl={self.ttl})>"
+        )
+
     def __call__(self, fn):
         """Return the correct wrapper."""
+
         @functools.wraps(fn)
         def _non_async_wrapper(*args, **kwargs):
             key = self.cache._get_key(fn, args, kwargs, self.serializer, self.ignore)
