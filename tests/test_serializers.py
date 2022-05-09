@@ -36,7 +36,7 @@ def test_data(cache, data):
     key, value = data
     counter = 0
 
-    @cache.cache()
+    @cache()
     def get_data():
         nonlocal counter
         counter += 1
