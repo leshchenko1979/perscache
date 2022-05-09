@@ -62,7 +62,7 @@ cache = Cache()
 
 counter = 0
 
-@cache()
+@cache
 def get_data():
     print("Fetching data...")
 
@@ -84,7 +84,7 @@ print(counter)  # the function was called only once
 
 ### Changing parameters or the code of the function invalidates the cache
 ```python
-@cache()
+@cache
 def get_data(key):
     print("The function has been called...")
     return key
@@ -100,7 +100,7 @@ print(get_data("fgh"))  # the function has been called again
 print(get_data("abc"))  # using the cache
 # abc
 
-@cache()
+@cache
 def get_data(key):
     print("This function has been changed...")
     return key
@@ -167,7 +167,7 @@ else:
     )
     cache = LocalFileStorage(location=cache_location)
 
-@cache()
+@cache
 def function():
     ...
 ```
@@ -220,7 +220,7 @@ PyrogramSerializer = make_serializer(
 
 cache = Cache(serializer=PyrogramSerializer())
 
-@cache()
+@cache
 async def some_pyrogram_func() -> pyrogram.Message:
     ...
 ```

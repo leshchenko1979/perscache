@@ -52,6 +52,22 @@ def test_alias(cache):
     assert counter == 1
 
 
+def test_no_parens(cache):
+
+    counter = 0
+
+    @cache
+    def get_data():
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    get_data()
+    get_data()
+
+    assert counter == 1
+
+
 @pytest.mark.asyncio
 async def test_basic_async(cache):
 
