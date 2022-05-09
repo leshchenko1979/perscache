@@ -18,6 +18,7 @@ def test_repr(cache):
     assert "CloudPickleSerializer" in repr(cache.serializer)
     assert "LocalFileStorage" in repr(cache.storage)
     assert "Cache" in repr(cache)
+    assert "NoCache" in repr(NoCache())
 
 
 def test_basic(cache):
@@ -29,6 +30,8 @@ def test_basic(cache):
         nonlocal counter
         counter += 1
         return "abc"
+
+    assert "CachedFunction" in repr(get_data)
 
     get_data()
     get_data()
