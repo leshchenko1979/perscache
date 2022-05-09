@@ -1,11 +1,19 @@
+import io
+import json
+import pickle
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable
+
+import cloudpickle
 
 
 class Serializer(ABC):
 
     extension: str = None
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(), extension='{self.extension}'"
+
     @abstractmethod
     def dumps(self, data: Any) -> bytes:
         ...
@@ -15,49 +23,47 @@ class Serializer(ABC):
         ...
 
 
-class CloudPickleSerializer(Serializer):
+def make_serializer(
+    class_name: str,
+    ext: str,
+    dumps_fn: Callable[[Any], bytes],
+    loads_fn: Callable[[bytes], Any],
+) -> Serializer:
+    """Create a serializer class.
 
-    extension = "pickle"
+    Args:
+        class_name (str): The name of the serializer class.
+        extension (str): The file extension of the serialized data.
+        dumps (callable): The function to serialize data.
+                Takes a single argument and returns a bytes object.
+        loads (callable): The function to deserialize data.
+                Takes a single bytes object as argument and returns an object.
+    """
 
-    def dumps(self, data: Any) -> bytes:
-        import cloudpickle
+    class SerializerClass(Serializer):
+        extension = ext
+        dumps = lambda _, data: dumps_fn(data)
+        loads = lambda _, data: loads_fn(data)
 
-        return cloudpickle.dumps(data)
+    SerializerClass.__name__ = class_name
 
-    def loads(self, data: bytes) -> Any:
-        import cloudpickle
-
-        return cloudpickle.loads(data)
-
-
-class JSONSerializer(Serializer):
-
-    extension = "json"
-
-    def dumps(self, data: Any) -> bytes:
-        import json
-
-        return json.dumps(data).encode("utf-8")
-
-    def loads(self, data: bytes) -> Any:
-        import json
-
-        return json.loads(data.decode("utf-8"))
+    return SerializerClass
 
 
-class PickleSerializer(Serializer):
+CloudPickleSerializer = make_serializer(
+    "CloudPickleSerializer", "pickle", cloudpickle.dumps, cloudpickle.loads
+)
 
-    extension = "pickle"
+JSONSerializer = make_serializer(
+    "JSONSerializer",
+    "json",
+    lambda data: json.dumps(data).encode("utf-8"),
+    lambda data: json.loads(data.decode("utf-8")),
+)
 
-    def dumps(self, data: Any) -> bytes:
-        import pickle
-
-        return pickle.dumps(data)
-
-    def loads(self, data: bytes) -> Any:
-        import pickle
-
-        return pickle.loads(data)
+PickleSerializer = make_serializer(
+    "PickleSerializer", "pickle", pickle.dumps, pickle.loads
+)
 
 
 class YAMLSerializer(Serializer):
@@ -112,6 +118,5 @@ class CSVSerializer(Serializer):
 
     def loads(self, data: bytes) -> Any:
         import pandas as pd
-        import io
 
         return pd.read_csv(io.StringIO(data.decode("utf-8")), index_col=0)

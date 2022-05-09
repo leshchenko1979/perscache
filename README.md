@@ -180,7 +180,8 @@ The files are named like `<function_name>-<hash>.<serializer_extension>`, e.g. `
 When using `LocalFileStorage(max_size=...)`, the least recently used cache entries are automatically removed to keep the total cache size with the `max_size` limit.
 
 ## Make your own serialization and storage backends
-Although you can use the standard `PickleSerializer()` for almost any type of data, sometimes you want to inspect the results of a decorated function by lookin into the cache files. This requires the data to be serialized in a human-readable format. But the included human-readable serializers (`JSONSerializer()`, `YAMLSerializer()`, `CSVSerializer()`) sometimes cannot process complex objects.
+### Serializers
+Although you can use the standard `CloudPickleSerializer()` for almost any type of data, sometimes you want to inspect the results of a decorated function by lookin into the cache files. This requires the data to be serialized in a human-readable format. But the included human-readable serializers (`JSONSerializer()`, `YAMLSerializer()`, `CSVSerializer()`) sometimes cannot process complex objects.
 
 >To see which serializers are compatible with which data types, see the [compatibility.py](/perscache/compatibility.py) file.
 
@@ -204,7 +205,26 @@ class MySerializer(Serializer):
 
 cache = Cache(serializer=MySerializer())
 ```
+#### Serializer factory
+You can also use the `perscache.serializers.make_serializer()` function to create a serializer for a given data type.
+```python
+import pyrogram
+from perscache.serializers import make_serializer
 
+PyrogramSerializer = make_serializer(
+    "PyrogramSerializer",
+    "pyro",
+    dumps_fn = lambda data: str(data).encode("utf-8"),
+    loads_fn = lambda data: eval(data.decode("utf-8")),
+)
+
+cache = Cache(serializer=PyrogramSerializer())
+
+@cache.cache()
+async def some_pyrogram_func() -> pyrogram.Message:
+    ...
+```
+### Storage back-ends
 Making a custom storage backed is similar:
 ```python
 class MyStorage(Storage):
