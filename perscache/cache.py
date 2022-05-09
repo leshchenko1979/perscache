@@ -47,7 +47,7 @@ class Cache:
     def __repr__(self) -> str:
         return f"<Cache(serializer={self.serializer}, storage={self.storage})>"
 
-    def cache(
+    def __call__(
         self,
         ignore: Iterable[str] = None,
         serializer: Serializer = None,
@@ -105,6 +105,8 @@ class Cache:
 
         return _decorator
 
+    cache = __call__  # Alias for backwards compatibility.
+
     @staticmethod
     def _get(
         key: str, serializer: Serializer, storage: Storage, deadline: dt.datetime
@@ -154,7 +156,7 @@ class NoCache:
         return "<NoCache>"
 
     @staticmethod
-    def cache(*decorator_args, **decorator_kwargs):
+    def __call__(*decorator_args, **decorator_kwargs):
         """Will call the decorated function every time and
         return its result without any caching.
         """
@@ -171,3 +173,5 @@ class NoCache:
             return _async_wrapper if is_async(fn) else _non_async_wrapper
 
         return _decorator
+
+    cache = __call__  # Alias for backwards compatibility.
