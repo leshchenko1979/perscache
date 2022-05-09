@@ -24,6 +24,8 @@ def test_basic(cache):
         counter += 1
         return "abc"
 
+    assert "CloudPickleSerializer" in repr(cache.serializer)
+
     get_data()
     get_data()
 
