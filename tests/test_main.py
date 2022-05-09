@@ -31,8 +31,6 @@ def test_basic(cache):
         counter += 1
         return "abc"
 
-    assert "CachedFunction" in repr(get_data)
-
     get_data()
     get_data()
 
