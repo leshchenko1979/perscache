@@ -2,9 +2,10 @@ import io
 import json
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import cloudpickle
+from beartype import beartype
 
 
 class Serializer(ABC):
@@ -86,7 +87,8 @@ class ParquetSerializer(Serializer):
 
     extension = "parquet"
 
-    def __init__(self, compression: str = "brotli"):
+    @beartype
+    def __init__(self, compression: Optional[str] = "brotli"):
         self.compression = compression
 
     def __repr__(self):

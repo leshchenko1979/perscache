@@ -1,4 +1,8 @@
+import datetime as dt
+
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
+from icontract import ViolationError
 from perscache import Cache
 from perscache.cache import NoCache
 from perscache.serializers import (
@@ -151,7 +155,7 @@ def test_ignore_args(cache):
 
     counter = 0
 
-    @cache(ignore=["ignore_this"])
+    @cache(ignore="ignore_this")
     def get_data(key, ignore_this):
         nonlocal counter
         counter += 1
@@ -228,3 +232,26 @@ def test_hash(tmp_path):
         assert cache._get_key(
             lambda: None, (data1,), None, CloudPickleSerializer(), None
         ) != cache._get_key(lambda: None, (data2,), None, CloudPickleSerializer(), None)
+
+
+def test_typing(cache):
+    with pytest.raises(BeartypeCallHintParamViolation):
+        Cache("asd")
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+
+        @cache(ttl=10)
+        def get_data():
+            ...
+
+    with pytest.raises(ViolationError):
+
+        @cache(ignore=["abc"])
+        def get_data():
+            ...
+
+    with pytest.raises(ViolationError):
+
+        @cache(ttl=dt.timedelta(days=-1))
+        def get_data():
+            ...
