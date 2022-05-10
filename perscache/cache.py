@@ -125,7 +125,7 @@ class Cache:
 
         return hash_it(inspect.getsource(fn), type(serializer).__name__, arg_dict)
 
-    def _get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
+    def _get_filename(self, fn: Callable, key: str, serializer: Serializer) -> str:
         return f"{fn.__name__}-{key}.{serializer.extension}"
 
 

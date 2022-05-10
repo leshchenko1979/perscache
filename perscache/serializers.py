@@ -2,11 +2,10 @@ import io
 import json
 import pickle
 from abc import ABC, abstractmethod
-from typing import Type
 
 import cloudpickle
 from beartype import beartype
-from beartype.typing import Any, Callable, Optional
+from beartype.typing import Any, Callable, Optional, Type
 
 
 class Serializer(ABC):
