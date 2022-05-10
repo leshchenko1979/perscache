@@ -15,22 +15,6 @@ def test_repr(cache):
     assert "Cache" in repr(cache)
 
 
-def test_basic(cache):
-
-    counter = 0
-
-    @cache()
-    def get_data():
-        nonlocal counter
-        counter += 1
-        return "abc"
-
-    get_data()
-    get_data()
-
-    assert counter == 1
-
-
 def test_alias(cache):
 
     counter = 0
@@ -118,32 +102,3 @@ def test_typing(cache):
         @cache(ttl=dt.timedelta(days=-1))
         def get_data():
             ...
-
-
-def test_ttl(tmp_path):
-    cache = Cache(storage=LocalFileStorage(tmp_path))
-
-    counter = 0
-
-    @cache(ttl=dt.timedelta(seconds=0.1))
-    def get_data(key):
-        nonlocal counter
-        counter += 1
-        return key
-
-    get_data(1)
-    assert counter == 1
-
-    get_data(1)
-    assert counter == 1
-
-    get_data(2)
-    assert counter == 2
-
-    time.sleep(0.2)
-
-    get_data(1)
-    assert counter == 3
-
-    get_data(2)
-    assert counter == 4
