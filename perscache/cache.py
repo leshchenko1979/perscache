@@ -7,10 +7,10 @@ import datetime as dt
 import functools
 import hashlib
 import inspect
-from typing import Any, Callable, Iterable, Optional
 
 import cloudpickle
 from beartype import beartype
+from beartype.typing import Any, Callable, Iterable, Optional
 from icontract import require
 
 from .serializers import CloudPickleSerializer, Serializer

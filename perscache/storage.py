@@ -1,9 +1,9 @@
 import datetime as dt
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterator, Optional, Union
 
 from beartype import beartype
+from beartype.typing import Iterator, Optional, Union
 
 
 class CacheExpired(Exception):
@@ -159,6 +159,7 @@ class GoogleCloudStorage(FileStorage):
         super().__init__(location, max_size)
 
         import gcsfs
+
         self.fs = gcsfs.GCSFileSystem(**storage_options)
 
     def read_file(self, path: Union[str, Path]) -> bytes:
