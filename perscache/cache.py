@@ -7,9 +7,11 @@ import datetime as dt
 import functools
 import hashlib
 import inspect
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Optional
 
 import cloudpickle
+from beartype import beartype
+from icontract import require
 
 from .serializers import CloudPickleSerializer, Serializer
 from .storage import CacheExpired, LocalFileStorage, Storage
@@ -33,6 +35,7 @@ def is_async(fn):
 class Cache:
     """A cache that can be used to memoize functions."""
 
+    @beartype
     def __init__(self, serializer: Serializer = None, storage: Storage = None):
         """Initialize the cache.
 
@@ -47,14 +50,19 @@ class Cache:
     def __repr__(self) -> str:
         return f"<Cache(serializer={self.serializer}, storage={self.storage})>"
 
+    @beartype
+    @require(
+        lambda ttl: ttl is None or ttl > dt.timedelta(seconds=0),
+        "ttl must be positive.",
+    )
     def __call__(
         self,
-        fn: callable = None,
+        fn: Optional[Callable] = None,
         *,
-        ignore: Iterable[str] = None,
-        serializer: Serializer = None,
-        storage: Storage = None,
-        ttl: dt.timedelta = None,
+        ignore: Optional[Iterable[str]] = None,
+        serializer: Optional[Serializer] = None,
+        storage: Optional[Storage] = None,
+        ttl: Optional[dt.timedelta] = None,
     ):
         """Cache the value of the wrapped function.
 
@@ -75,7 +83,10 @@ class Cache:
                     Defaults to None.
         """
 
-        wrapper = CachedFunction(
+        if isinstance(ignore, str):
+            ignore = [ignore]
+
+        wrapper = _CachedFunction(
             self, ignore, serializer or self.serializer, storage or self.storage, ttl
         )
 
@@ -154,16 +165,17 @@ class NoCache:
     cache = __call__  # Alias for backwards compatibility.
 
 
-class CachedFunction:
-    """A class used as a wrapper."""
+class _CachedFunction:
+    """An interal class used as a wrapper."""
 
+    @beartype
     def __init__(
         self,
         cache: Cache,
-        ignore: Iterable[str],
+        ignore: Optional[Iterable[str]],
         serializer: Serializer,
         storage: Storage,
-        ttl: dt.timedelta,
+        ttl: Optional[dt.timedelta],
     ):
         self.cache = cache
         self.ignore = ignore
@@ -177,7 +189,12 @@ class CachedFunction:
             "serializer={self.serializer}, storage={self.storage}, ttl={self.ttl})>"
         )
 
-    def __call__(self, fn):
+    @require(
+        lambda self, fn: self.ignore is None
+        or all(x in inspect.signature(fn).parameters for x in self.ignore),
+        "Ignored parameters not found in the function signature.",
+    )
+    def __call__(self, fn: Callable) -> Callable:
         """Return the correct wrapper."""
 
         @functools.wraps(fn)
