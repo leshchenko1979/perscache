@@ -1,8 +1,12 @@
+import inspect
+
+import pytest
 from perscache import Cache
 from perscache.serializers import (
     CloudPickleSerializer,
     JSONSerializer,
     PickleSerializer,
+    make_serializer,
 )
 from perscache.storage import LocalFileStorage
 
@@ -151,3 +155,43 @@ def test_hash(tmp_path):
         assert cache._get_key(
             lambda x: None, (data1,), {}, CloudPickleSerializer(), None
         ) != cache._get_key(lambda x: None, (data2,), {}, CloudPickleSerializer(), None)
+
+
+@pytest.mark.asyncio
+async def test_retrieve_with_new_cache(tmp_path):
+    counter = 0
+
+    cache = Cache(storage=LocalFileStorage(tmp_path))
+
+    @cache(ignore={"app", "key"})
+    async def get_data(app, key):
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    source1 = inspect.getsource(get_data)
+
+    assert await get_data("xxx", 111) == "abc"
+    assert counter == 1
+
+    # and now, a new cache...
+    cache = Cache(storage=LocalFileStorage(tmp_path))
+
+    # ...for the same function
+    @cache(ignore={"app", "key"})
+    async def get_data(app, key):
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    source2 = inspect.getsource(get_data)
+
+    assert source1 == source2  # source same
+
+    # should be taken from cache
+    assert await get_data("yyy", 222) == "abc"
+    assert counter == 1
+
+def test_make_serializer():
+    DummySerializer = make_serializer("DummySerializer", "dummy", lambda x: x, lambda x: x)
+    assert DummySerializer.__name__ == "DummySerializer"  # important for hashing

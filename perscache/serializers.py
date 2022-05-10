@@ -2,6 +2,7 @@ import io
 import json
 import pickle
 from abc import ABC, abstractmethod
+from typing import Type
 
 import cloudpickle
 from beartype import beartype
@@ -24,12 +25,13 @@ class Serializer(ABC):
         ...
 
 
+@beartype
 def make_serializer(
     class_name: str,
     ext: str,
     dumps_fn: Callable[[Any], bytes],
     loads_fn: Callable[[bytes], Any],
-) -> Serializer:
+) -> Type[Serializer]:
     """Create a serializer class.
 
     Args:
@@ -41,14 +43,16 @@ def make_serializer(
                 Takes a single bytes object as argument and returns an object.
     """
 
-    class SerializerClass(Serializer):
-        extension = ext
-        dumps = lambda _, data: dumps_fn(data)
-        loads = lambda _, data: loads_fn(data)
 
-    SerializerClass.__name__ = class_name
-
-    return SerializerClass
+    return type(
+        class_name,
+        (Serializer,),
+        {
+            "extension": ext,
+            "dumps": lambda _, data: dumps_fn(data),
+            "loads": lambda _, data: loads_fn(data),
+        },
+    )
 
 
 CloudPickleSerializer = make_serializer(

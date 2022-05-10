@@ -123,7 +123,7 @@ class Cache:
         if ignore is not None:
             arg_dict = {k: v for k, v in arg_dict.items() if k not in ignore}
 
-        return hash_it(inspect.getsource(fn), type(serializer), arg_dict)
+        return hash_it(inspect.getsource(fn), type(serializer).__name__, arg_dict)
 
     def _get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
         return f"{fn.__name__}-{key}.{serializer.extension}"
