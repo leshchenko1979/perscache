@@ -121,19 +121,19 @@ def get_data():
     ...
 ```
 ### Ignoring certain arguments
-By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed. **NOTE** that the decorated function should be called with ignored arguments specified as keyword arguments.
+By specifying the arguments that should be ignored, you can still use the cache even in the values of these arguments have changed.
 ```python
 @cache(ignore="ignore_this")
 def get_data(key, ignore_this):
     print("The function has been called...")
     return key
 
-print(get_data("abc", ignore_this="ignore_1"))  # the function has been called
+print(get_data("abc", "ignore_1"))  # the function has been called
 # The function has been called...
 # abc
 
 # using the cache although the the second argument is different
-print(get_data("abc", ignore_this="ignore_2"))
+print(get_data("abc", "ignore_2"))
 # abc
 ```
 
@@ -254,7 +254,7 @@ Tries to find a cached result of the decorated function in persistent storage. R
 
 The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
 ##### Arguments
-- `ignore (str | Iterable[str])`: keyword arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
+- `ignore (str | Iterable[str])`: arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
 
 - `serializer (perscache.serializers.Serializer)`: Overrides the default `Cache()` serializer. Defaults to `None`.
 
