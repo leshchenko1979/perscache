@@ -118,10 +118,12 @@ class Cache:
         """Get a cache key."""
 
         # Remove ignored arguments from the arguments tuple and kwargs dict
-        if ignore is not None:
-            kwargs = {k: v for k, v in kwargs.items() if k not in ignore}
+        arg_dict = inspect.signature(fn).bind(*args, **kwargs).arguments
 
-        return hash_it(inspect.getsource(fn), type(serializer), args, kwargs)
+        if ignore is not None:
+            arg_dict = {k: v for k, v in arg_dict.items() if k not in ignore}
+
+        return hash_it(inspect.getsource(fn), type(serializer), arg_dict)
 
     def _get_filename(self, fn: callable, key: str, serializer: Serializer) -> str:
         return f"{fn.__name__}-{key}.{serializer.extension}"
