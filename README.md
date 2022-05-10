@@ -34,9 +34,7 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 ### Serialization and storage
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
 
-- Various storage backends:
-    - local disk (_implemented_) or
-    - cloud storage (_to be implemented soon_).
+- Various storage backends: local disk, GCS (Google Cloud Storage) and others to be implemented soon (S3 #13, Azure Blob Storage #14).
 
 - Serialization and storage are separated into two different classes, so that you can mix various serialization formats and storage back-ends as you like - JSON to local storage, Pickle to AWS, Parquet to Google Cloud Storage etc.
 
@@ -158,26 +156,23 @@ from perscache import Cache, NoCache
 from perscache.storage import LocalFileStorage
 
 if os.environ.get["DEBUG"]:
-    cache = NoCache()
+    cache = NoCache()  # turn off caching in debug mode
 else:
-    cache_location = (
-        "gs://bucket/folder"
-        if os.environ.get["GOOGLE_PROJECT_NAME"]
-        else cache_location = "/tmp/cache"
+    cache = (
+        GoogleCloudStorage("/bucket/folder")
+        if os.environ.get["GOOGLE_PROJECT_NAME"]  # if running in the cloud
+        else LocalFileStorage()
     )
-    cache = LocalFileStorage(location=cache_location)
 
 @cache
 def function():
     ...
 ```
 ### Inspecting cached results
-When using `LocalFileStorage(location=...)`, the files are put into the directory specified by the `location` parameter.
-
-The files are named like `<function_name>-<hash>.<serializer_extension>`, e.g. `get_data-9bf10a401d3d785317b2b35bcb5be1f2.json`.
+Use human-readable serialization (`JSONSerializer`, `YAMLSerializer`, `CSVSerializer`) and a file storage (`LocalFileStorage`, `GoogleCloudStorage`) to inspect cached results.
 
 ### Automatic cleanup
-When using `LocalFileStorage(max_size=...)`, the least recently used cache entries are automatically removed to keep the total cache size with the `max_size` limit.
+When using `LocalFileStorage(max_size=...)` or `GoogleCloudStorage(max_size=...)` , the least recently used cache entries are automatically removed to keep the total cache size with the `max_size` limit.
 
 ## Make your own serialization and storage backends
 ### Serializers
@@ -241,6 +236,7 @@ class MyStorage(Storage):
 
 cache = Cache(storage=MyStorage())
 ```
+You can also derive your storage class from `perscache.storage.FileStorage` if you are building a filesystem-based storage back-end. Refer to the [storage.py](/perscache/storage.py#FileStorage) file for more information.
 
 ## API Reference
 ### class `Cache()`
@@ -300,3 +296,33 @@ This is the default storage class used by `Cache`.
 - `location (str)`: a directory to store the cache files. Defaults to `".cache"`.
 
 - `max_size (int)`: the maximum size for the cache. If set, then, before a new cache entry is written, the future size of the directory is calculated and the least recently used cache entries are removed. If `None`, the cache size grows indefinitely. Defaults to `None`.
+
+#### class `perscache.storage.GoogleCloudStorage`
+Keeps cache entries in separate files in a Google Cloud Storage Bucket.
+
+Relies on the [`gcsfs`](https://pypi.org/project/gcsfs/) module, which is not a part of the project dependencies and needs to to be installed by the user if he is to use this class.
+
+##### Parameters
+- `location (str)`: a directory to store the cache files. Defaults to `".cache"`.
+
+- `max_size (int)`: the maximum size for the cache. If set, then, before a new cache entry is written, the future size of the directory is calculated and the least recently used cache entries are removed. If `None`, the cache size grows indefinitely. Defaults to `None`.
+
+- `storage_options (dict)`: a dictionary of parameters to pass to the constructor of the `GSCFilesystem` class of the [`gcsfs`](https://pypi.org/project/gcsfs/) module (see the module documentation for more information). Defaults to `None`.
+
+```python
+# supposing gcsfs is installed
+
+from perscache import Cache
+from perscache.storage import GoogleCloudStorage
+
+cache = Cache(
+    storage=GoogleCloudStorage(
+        location="my-bucket/cache",
+        storage_options={"token": "my-token.json"}
+    )
+)
+
+@cache
+def some_func():
+    ...
+```
