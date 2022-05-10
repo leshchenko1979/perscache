@@ -7,9 +7,6 @@ import pytest
 from perscache import Cache
 from perscache.storage import GoogleCloudStorage, LocalFileStorage
 
-os.environ["GOOGLE_TOKEN"] = "/home/leshchenko/cian-parse-557ca87e06c3.json"
-os.environ["GOOGLE_BUCKET"] = "cian-parse.appspot.com"
-
 caches = ["local"]
 
 if os.environ.get("GOOGLE_TOKEN") and os.environ.get("GOOGLE_BUCKET"):
