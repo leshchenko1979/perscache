@@ -18,32 +18,23 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - Cache the results of a function that uses a lot of resources: runs for a long time, consumes a lot of traffic, uses up paid API calls etc.
 - Speed up retreival of data that doesn't change often.
 - Inspect the results of a decorated function while debugging.
+- Build a simple data store.
 
 ## Features
 ### Caching
 - Easy to swap out the cache configuration when switching environments.
-
 - Async functions supported.
-
 - Time-to-live (TTL) support - automatically invalidate cache entries after a certain time.
-
 - Automatic cache invalidation when the decorated function arguments or code have been changed.
-
 - You can ignore changes in certain arguments of the decorated function.
 
 ### Serialization and storage
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
-
-- Various storage backends: local disk, GCS (Google Cloud Storage) and others to be implemented soon (S3 #13, Azure Blob Storage #14).
-
+- Various storage backends: local disk, GCS (Google Cloud Storage) and others to be implemented soon ([S3](https://github.com/leshchenko1979/perscache/issues/13), [Azure Blob Storage](https://github.com/leshchenko1979/perscache/issues/14)).
 - Serialization and storage are separated into two different classes, so that you can mix various serialization formats and storage back-ends as you like - JSON to local storage, Pickle to AWS, Parquet to Google Cloud Storage etc.
-
 - You can set default serialization format and storage backend and then change them on a per-function basis.
-
 - You can easily add new serialization formats and storage back-ends.
-
 - Local storage is file-based, so you can use human-readable serialization (JSON, YAML, CSV) and inspect cached results.
-
 - Automatic cleanup: least recently used results can be removed from storage when the total storage size exceeds a given threshold.
 
 ## Getting started
@@ -241,7 +232,7 @@ You can also derive your storage class from `perscache.storage.FileStorage` if y
 ## API Reference
 ### class `Cache()`
 #### Parameters
-- `serializer (perscache.serializers.Serializer)`: a serializer class to use for cinverting stored data. Defaults to `perscache.serlializers.PickleSerializer`.
+- `serializer (perscache.serializers.Serializer)`: a serializer class to use for converting stored data. Defaults to `perscache.serlializers.PickleSerializer`.
 
 - `storage (perscache.storage.Storage)`: a storage back-end used to save and load data. Defaults to `perscache.storage.LocalFileStorage`.
 
