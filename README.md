@@ -11,7 +11,7 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 - [Features](#features)
 - [Getting started](#getting-started)
 - [Make your own serialization and storage back-ends](#make-your-own-serialization-and-storage-backends)
-- [API Reference](#api-reference)
+- [API Reference](docs/api_reference.md)
 
 
 ## Use cases
@@ -99,6 +99,9 @@ print(get_data("abc"))  # the function has been called again
 # abc
 
 ```
+>NOTE: `perscache` hashes the function arguments, its code and the name of the class of the serializer, so that the cache is invalidated when any of these change. You can use the `ignore_args` parameter to [ignore changes in certain arguments](#ignoring-certain-arguments) of the decorated function.
+>
+>However, if you change the code of the serializer, the cache is not invalidated. (This is because we cannot hash the code of the serializer when in was made with the factory function `make_serializer`. See [Make your own serialization and storage back-ends](#make-your-own-serialization-and-storage-backends) for more details.)
 ### Setting the expiry time of the cache
 ```python
 import datetime as dt
@@ -129,7 +132,10 @@ print(get_data("abc", "ignore_2"))
 ### Changing the default serialization format and storage backend
 ```python
 # set up serialization format and storage backend
-cache = Cache(serializer=JSONSerializer(), storage=GCPStorage("bucket"))
+cache = Cache(
+    serializer=JSONSerializer(),
+    storage=GoogleCloudStorage("/bucket/folder")
+)
 
 ...
 
@@ -171,7 +177,6 @@ Although you can use the standard `CloudPickleSerializer()` for almost any type 
 
 >To see which serializers are compatible with which data types, see the [compatibility.py](/perscache/compatibility.py) file.
 
-
 That's when making your own serializer comes in handy.
 
 To do this, you should:
@@ -179,6 +184,8 @@ To do this, you should:
 2. Use your class with the `Cache` class.
 
 ```python
+from perscache.serializers import Serializer
+
 class MySerializer(Serializer):
 
     extension = "data"
@@ -228,92 +235,3 @@ class MyStorage(Storage):
 cache = Cache(storage=MyStorage())
 ```
 You can also derive your storage class from `perscache.storage.FileStorage` if you are building a filesystem-based storage back-end. Refer to the [storage.py](/perscache/storage.py#FileStorage) file for more information.
-
-## API Reference
-### class `Cache()`
-#### Parameters
-- `serializer (perscache.serializers.Serializer)`: a serializer class to use for converting stored data. Defaults to `perscache.serlializers.PickleSerializer`.
-
-- `storage (perscache.storage.Storage)`: a storage back-end used to save and load data. Defaults to `perscache.storage.LocalFileStorage`.
-
-#### decorator `Cache().__call__()`
-Tries to find a cached result of the decorated function in persistent storage. Returns the saved result if it was found, or calls the decorated function and caches its result.
-
-The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
-##### Arguments
-- `ignore (str | Iterable[str])`: arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
-
-- `serializer (perscache.serializers.Serializer)`: Overrides the default `Cache()` serializer. Defaults to `None`.
-
-- `storage (perscache.storage.Storage)`: Overrides the default `Cache()` storage. Defaults to `None`.
-
-- `ttl (datetime.timedelta)`: The time-to-live of the cache. If `None`, the cache never exprires. Defaults to `None`.
-
-### class `NoCache()`
-This class has no parameters. It is useful to [alternate cache behaviour depending on the environment](#alternating-cache-settings-depending-on-the-environment).
-#### decorator `NoCache().__call__()`
-The underlying function will be called every time the decorated function has been called and no caching will take place.
-
-This decorator will ignore any parameters it has been given.
-### Serializers
-Serializers are imported from the `perscache.serializers` module.
-
-See also [how to make your own serializer](#make-your-own-serialization-and-storage-backends).
-#### class `perscache.serializers.JSONSerializer`
-Uses the `json` module.
-#### class `perscache.serializers.YAMLSerializer`
-Uses the `yaml` module.
-#### class `perscache.serializers.PickleSerializer`
-Uses the `pickle` module.
-#### class `perscache.serializers.CloudPickleSerializer`
-Uses the `cloudpickle` module. It's the most capable serializer of all, able to process most of the data types. It's the default serializer for the `Cache` class.
-#### class `perscache.serializers.CSVSerializer`
-Uses the `pandas` module. Processes `pandas.DataFrame` objects.
-#### class `perscache.serializers.ParquetSerializer`
-Uses the `pyarrow` module. Processes `pandas.DataFrame` objects.
-##### Parameters
-- `compression (str)`: compression used by `pyarrow` to save the data. Defaults to `"brotli"`.
-
-### Storage back-ends
-Storage back-ends are imported from the `perscache.serializers` module.
-
-See also [how to make your own storage back-end](#make-your-own-serialization-and-storage-backends).
-
-#### class `perscache.storage.LocalFileStorage`
-Keeps cache entries in separate files in a file system directory.
-
-This is the default storage class used by `Cache`.
-##### Parameters
-- `location (str)`: a directory to store the cache files. Defaults to `".cache"`.
-
-- `max_size (int)`: the maximum size for the cache. If set, then, before a new cache entry is written, the future size of the directory is calculated and the least recently used cache entries are removed. If `None`, the cache size grows indefinitely. Defaults to `None`.
-
-#### class `perscache.storage.GoogleCloudStorage`
-Keeps cache entries in separate files in a Google Cloud Storage Bucket.
-
-Relies on the [`gcsfs`](https://pypi.org/project/gcsfs/) module, which is not a part of the project dependencies and needs to to be installed by the user if he is to use this class.
-
-##### Parameters
-- `location (str)`: a directory to store the cache files. Defaults to `".cache"`.
-
-- `max_size (int)`: the maximum size for the cache. If set, then, before a new cache entry is written, the future size of the directory is calculated and the least recently used cache entries are removed. If `None`, the cache size grows indefinitely. Defaults to `None`.
-
-- `storage_options (dict)`: a dictionary of parameters to pass to the constructor of the `GSCFilesystem` class of the [`gcsfs`](https://pypi.org/project/gcsfs/) module (see the module documentation for more information). Defaults to `None`.
-
-```python
-# supposing gcsfs is installed
-
-from perscache import Cache
-from perscache.storage import GoogleCloudStorage
-
-cache = Cache(
-    storage=GoogleCloudStorage(
-        location="my-bucket/cache",
-        storage_options={"token": "my-token.json"}
-    )
-)
-
-@cache
-def some_func():
-    ...
-```
