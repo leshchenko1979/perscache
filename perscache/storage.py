@@ -150,6 +150,7 @@ class LocalFileStorage(FileStorage):
 
 
 class GoogleCloudStorage(FileStorage):
+    @beartype
     def __init__(
         self,
         location: Optional[Union[str, Path]] = ".cache",

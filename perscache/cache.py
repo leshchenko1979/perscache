@@ -185,12 +185,6 @@ class _CachedFunction:
         self.storage = storage
         self.ttl = ttl
 
-    def __repr__(self) -> str:
-        return (
-            f"<CachedFunction(cache={self.cache}, ignore={self.ignore}, "
-            "serializer={self.serializer}, storage={self.storage}, ttl={self.ttl})>"
-        )
-
     @require(
         lambda self, fn: self.ignore is None
         or all(x in inspect.signature(fn).parameters for x in self.ignore),

@@ -1,18 +1,17 @@
 import datetime as dt
-import time
 
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 from icontract import ViolationError
 from perscache import Cache
 from perscache.cache import NoCache
-from perscache.storage import LocalFileStorage
 
 
 def test_repr(cache):
     assert "CloudPickleSerializer" in repr(cache.serializer)
     assert "LocalFileStorage" in repr(cache.storage)
     assert "Cache" in repr(cache)
+    assert "NoCache" in repr(NoCache())
 
 
 def test_alias(cache):

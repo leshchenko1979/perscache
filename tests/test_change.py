@@ -192,6 +192,47 @@ async def test_retrieve_with_new_cache(tmp_path):
     assert await get_data("yyy", 222) == "abc"
     assert counter == 1
 
+
+@pytest.mark.xfail(
+    reason=(
+        "There is no way to understand if the implementation of the serializer has changed"
+        " if it was created with make_serializer()"
+    )
+)
+async def test_retrieve_with_new_serializer(cache):
+    counter = 0
+
+    @cache(ignore={"app", "key"})
+    async def get_data(app, key):
+        nonlocal counter
+        counter += 1
+        return "abc"
+
+    DummySerializer = make_serializer(
+        "DummySerializer", "dummy", lambda x: x, lambda x: x
+    )
+    source1 = inspect.getsource(cache.serializer.dumps)
+
+    assert await get_data("xxx", 111) == "abc"
+    assert counter == 1
+
+    # and now, a new serializer...
+    DummySerializer = make_serializer(
+        "DummySerializer", "dummy", lambda x: x * 2, lambda x: x * 2
+    )
+
+    source2 = inspect.getsource(cache.serializer.dumps)
+
+    assert source1 != source2  # source not the same
+
+    await get_data("yyy", 222)
+
+    # should NOT be taken from cache
+    assert counter == 2
+
+
 def test_make_serializer():
-    DummySerializer = make_serializer("DummySerializer", "dummy", lambda x: x, lambda x: x)
+    DummySerializer = make_serializer(
+        "DummySerializer", "dummy", lambda x: x, lambda x: x
+    )
     assert DummySerializer.__name__ == "DummySerializer"  # important for hashing
