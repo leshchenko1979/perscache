@@ -36,14 +36,14 @@ def test_body_change(cache: Cache):
     def get_data(key):
         return key
 
-    hash1 = cache._get_key(get_data, (None,), {}, None, None)
+    hash1 = cache._get_hash(get_data, (None,), {}, None, None)
 
     @cache()
     def get_data(key):
         print("This function has been changed...")
         return key
 
-    hash2 = cache._get_key(get_data, (None,), {}, None, None)
+    hash2 = cache._get_hash(get_data, (None,), {}, None, None)
 
     assert hash1 != hash2
 
@@ -152,9 +152,11 @@ def test_hash(tmp_path):
     )
     for data1, data2 in data():
         assert data1 != data2
-        assert cache._get_key(
+        assert cache._get_hash(
             lambda x: None, (data1,), {}, CloudPickleSerializer(), None
-        ) != cache._get_key(lambda x: None, (data2,), {}, CloudPickleSerializer(), None)
+        ) != cache._get_hash(
+            lambda x: None, (data2,), {}, CloudPickleSerializer(), None
+        )
 
 
 @pytest.mark.asyncio

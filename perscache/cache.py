@@ -108,14 +108,13 @@ class Cache:
         storage.write(key, data)
 
     @staticmethod
-    def _get_key(
+    def _get_hash(
         fn: Callable,
         args: tuple,
         kwargs: dict,
         serializer: Serializer,
         ignore: Iterable[str],
     ) -> str:
-        """Get a cache key."""
 
         # Remove ignored arguments from the arguments tuple and kwargs dict
         arg_dict = inspect.signature(fn).bind(*args, **kwargs).arguments
@@ -193,32 +192,30 @@ class _CachedFunction:
     def __call__(self, fn: Callable) -> Callable:
         """Return the correct wrapper."""
 
-        @functools.wraps(fn)
-        def _non_async_wrapper(*args, **kwargs):
-            key = self.cache._get_key(fn, args, kwargs, self.serializer, self.ignore)
-            key = self.cache._get_filename(fn, key, self.serializer)
-            try:
-                deadline = (
-                    dt.datetime.now(dt.timezone.utc) - self.ttl if self.ttl else None
-                )
-                return self.cache._get(key, self.serializer, self.storage, deadline)
-            except (FileNotFoundError, CacheExpired):
-                value = fn(*args, **kwargs)
-                self.cache._set(key, value, self.serializer, self.storage)
-                return value
+        wrapper = self._async_wrapper if is_async(fn) else self._non_async_wrapper
+        return functools.update_wrapper(functools.partial(wrapper, fn), fn)
 
-        @functools.wraps(fn)
-        async def _async_wrapper(*args, **kwargs):
-            key = self.cache._get_key(fn, args, kwargs, self.serializer, self.ignore)
-            key = self.cache._get_filename(fn, key, self.serializer)
-            try:
-                deadline = (
-                    dt.datetime.now(dt.timezone.utc) - self.ttl if self.ttl else None
-                )
-                return self.cache._get(key, self.serializer, self.storage, deadline)
-            except (FileNotFoundError, CacheExpired):
-                value = await fn(*args, **kwargs)
-                self.cache._set(key, value, self.serializer, self.storage)
-                return value
+    def _non_async_wrapper(self, fn, *args, **kwargs):
+        key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
+        key = self.cache._get_filename(fn, key, self.serializer)
+        try:
+            return self.cache._get(key, self.serializer, self.storage, self.deadline)
+        except (FileNotFoundError, CacheExpired):
+            value = fn(*args, **kwargs)
+            self.cache._set(key, value, self.serializer, self.storage)
+            return value
 
-        return _async_wrapper if is_async(fn) else _non_async_wrapper
+    async def _async_wrapper(self, fn, *args, **kwargs):
+        key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
+        key = self.cache._get_filename(fn, key, self.serializer)
+        try:
+            return self.cache._get(key, self.serializer, self.storage, self.deadline)
+        except (FileNotFoundError, CacheExpired):
+            value = await fn(*args, **kwargs)
+            self.cache._set(key, value, self.serializer, self.storage)
+            return value
+
+    @property
+    def deadline(self) -> dt.datetime:
+        """Return the deadline for the cache."""
+        return dt.datetime.now(dt.timezone.utc) - self.ttl if self.ttl else None
