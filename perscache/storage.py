@@ -161,7 +161,11 @@ class GoogleCloudStorage(FileStorage):
 
         import gcsfs
 
-        self.fs = gcsfs.GCSFileSystem(**storage_options)
+        self.fs = (
+            gcsfs.GCSFileSystem(**storage_options)
+            if storage_options
+            else gcsfs.GCSFileSystem()
+        )
 
     def read_file(self, path: Union[str, Path]) -> bytes:
         with self.fs.open(path, "rb") as f:
