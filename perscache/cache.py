@@ -15,6 +15,7 @@ from icontract import require
 
 from .serializers import CloudPickleSerializer, Serializer
 from .storage import CacheExpired, LocalFileStorage, Storage
+from ._logger import debug, trace
 
 
 def hash_it(*data) -> str:
@@ -96,6 +97,7 @@ class Cache:
     cache = __call__  # Alias for backwards compatibility.
 
     @staticmethod
+    @trace
     def _get(
         key: str, serializer: Serializer, storage: Storage, deadline: dt.datetime
     ) -> Any:
@@ -103,6 +105,7 @@ class Cache:
         return serializer.loads(data)
 
     @staticmethod
+    @trace
     def _set(key: str, value: Any, serializer: Serializer, storage: Storage) -> None:
         data = serializer.dumps(value)
         storage.write(key, data)
@@ -195,22 +198,26 @@ class _CachedFunction:
         wrapper = self._async_wrapper if is_async(fn) else self._non_async_wrapper
         return functools.update_wrapper(functools.partial(wrapper, fn), fn)
 
-    def _non_async_wrapper(self, fn, *args, **kwargs):
+    def _non_async_wrapper(self, fn: Callable, *args, **kwargs):
+        debug("Getting cached result for function %s", fn.__name__)
         key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
         key = self.cache._get_filename(fn, key, self.serializer)
         try:
             return self.cache._get(key, self.serializer, self.storage, self.deadline)
-        except (FileNotFoundError, CacheExpired):
+        except (FileNotFoundError, CacheExpired) as exception:
+            debug("Unable to get cached result for %s: %s", fn.__name__, exception)
             value = fn(*args, **kwargs)
             self.cache._set(key, value, self.serializer, self.storage)
             return value
 
-    async def _async_wrapper(self, fn, *args, **kwargs):
+    async def _async_wrapper(self, fn: Callable, *args, **kwargs):
+        debug("Getting cached result for function %s", fn.__name__)
         key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
         key = self.cache._get_filename(fn, key, self.serializer)
         try:
             return self.cache._get(key, self.serializer, self.storage, self.deadline)
-        except (FileNotFoundError, CacheExpired):
+        except (FileNotFoundError, CacheExpired) as exception:
+            debug("Unable to get cached result for %s: %s", fn.__name__, exception)
             value = await fn(*args, **kwargs)
             self.cache._set(key, value, self.serializer, self.storage)
             return value
