@@ -6,7 +6,16 @@
 
 
 An easy to use decorator for persistent memoization: like `functools.lrucache`, but results persist between runs and can be stored in any format to any storage.
+```python
+from perscache import Cache
 
+cache = Cache()
+
+@cache
+def get_data():
+    ...
+```
+## Contents
 - [Use cases](#use-cases)
 - [Features](#features)
 - [Getting started](#getting-started)
@@ -42,7 +51,11 @@ An easy to use decorator for persistent memoization: like `functools.lrucache`, 
 ```bash
 pip install perscache
 ```
-
+There are also some optional dependencies you need to install to use some of the features:
+- `yaml` - for YAML serialization
+- `pyarrow` - for Parquet serialization
+- `pandas` - for CSV serialization
+- `gcsfs` - for GCS storage
 ### Basic usage
 ```python
 from perscache import Cache

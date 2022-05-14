@@ -99,3 +99,8 @@ def test_ttl(cache):
 
     get_data(2)
     assert counter == 4
+
+
+def test_initialization():
+    LocalFileStorage()
+    GoogleCloudStorage()

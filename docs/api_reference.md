@@ -26,6 +26,13 @@ def get_data():
 ```
 
 The cache will be invalidated if the function code, its argument values or the cache serializer have been changed.
+
+This method emits some log messages with a logger named `perscache`. Add a handler to the logger to see the messages:
+```python
+import logging
+
+logging.getLogger('perscache').addHandler(logging.StreamHandler())
+```
 ##### Arguments
 - `ignore (str | Iterable[str])`: arguments of the decorated function that will not be used in making the cache key. In other words, changes in these arguments will not invalidate the cache. Defaults to `None`.
 
