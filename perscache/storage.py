@@ -63,9 +63,7 @@ class FileStorage(Storage):
         Args:
             target_size: The target size of the cache.
         """
-        files = sorted(
-            self.iterdir(self.location), key=lambda f: self.atime(f), reverse=True
-        )
+        files = sorted(self.iterdir(self.location), key=self.atime, reverse=True)
 
         # find the set of most recently accessed files whose total size
         # is smaller than the target size

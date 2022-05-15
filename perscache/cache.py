@@ -20,7 +20,7 @@ from ._logger import debug, trace
 
 def hash_it(*data) -> str:
     """Pickles and hashes all the data passed to it as args."""
-    result = hashlib.md5()
+    result = hashlib.md5()  # nosec B303
 
     for datum in data:
         result.update(cloudpickle.dumps(datum))

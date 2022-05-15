@@ -14,16 +14,19 @@ if os.environ.get("GOOGLE_TOKEN") and os.environ.get("GOOGLE_BUCKET"):
 
 
 @pytest.fixture(params=caches)
-def cache(request):
+def cache(request, tmp_path):
     if request.param == "local":
-        storage = LocalFileStorage(Path("/tmp/perscache_test_cache"))
+        storage = LocalFileStorage(tmp_path)
     elif request.param == "gcs":
         storage = GoogleCloudStorage(
             Path(os.environ["GOOGLE_BUCKET"]) / "perscache_test_cache",
             storage_options={"token": os.environ["GOOGLE_TOKEN"]},
         )
-    yield Cache(storage=storage)
-    storage.clear()
+
+    try:
+        yield Cache(storage=storage)
+    finally:
+        storage.clear()
 
 
 def test_basic(cache):
