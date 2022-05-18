@@ -188,36 +188,35 @@ class GoogleCloudStorage(FileStorage):
         )
 
     def read_file(self, path: Union[str, Path]) -> bytes:
-        with self.fs.open(path, "rb") as f:
+        with self.fs.open(str(path), "rb") as f:
             return f.read()
 
     def write_file(self, path: Union[str, Path], data: bytes) -> None:
-        with self.fs.open(path, "wb") as f:
+        with self.fs.open(str(path), "wb") as f:
             f.write(data)
 
     def ensure_path(self, path: Union[str, Path]) -> None:
-        if not self.fs.exists(path):
-            self.fs.makedirs(path, exist_ok=True)
+        if not self.fs.exists(str(path)):
+            self.fs.makedirs(str(path), exist_ok=True)
 
     def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
-        return self.fs.ls(path) if self.fs.exists(path) else []
+        return self.fs.ls(str(path)) if self.fs.exists(str(path)) else []
 
     def rmdir(self, path: Union[str, Path]) -> None:
-        # str(path) is needed to prevent a bug in gcsfs ver. 22022.3.0:
-
         self.fs.rm(str(path))
 
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
-        mtime = self.fs.info(path)["updated"]
+        mtime = self.fs.info(str(path))["updated"]
         ts = dt.datetime.strptime(mtime.split(".")[0], "%Y-%m-%dT%H:%M:%S")
         ts = ts.replace(tzinfo=dt.timezone.utc, microsecond=int(mtime[-4:-1]))
         return ts
 
     def atime(self, path: Union[str, Path]) -> dt.datetime:
-        return self.mtime(path)
+        # fall back to mtime because last accessed (atime) is not available for GCS
+        return self.mtime(str(path))
 
     def size(self, path: Union[str, Path]) -> int:
-        return self.fs.info(path)["size"] if self.fs.exists(path) else 0
+        return self.fs.info(str(path))["size"] if self.fs.exists(str(path)) else 0
 
     def delete(self, path: Union[str, Path]) -> None:
-        self.fs.rm(path)
+        self.fs.rm(str(path))
