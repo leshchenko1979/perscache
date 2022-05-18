@@ -77,44 +77,65 @@ class FileStorage(Storage):
             self.delete(f)
 
     def clear(self) -> None:
+        """Remove the directory with the cache along with all of its contents
+        if it exists, otherwise just silently passes with no exceptions.
+        """
+
         for f in self.iterdir(self.location):
             self.delete(f)
         self.rmdir(self.location)
 
     @abstractmethod
     def read_file(self, path: Union[str, Path]) -> bytes:
+        """Read a file at a relative path inside the cache
+        or raise FileNotFoundError if not found.
+        """
         ...
 
     @abstractmethod
     def write_file(self, path: Union[str, Path]) -> bytes:
+        """Write a file at a relative path inside the cache
+        or raise FileNotFoundError if the cache directory doesn't exist.
+        """
         ...
 
     @abstractmethod
     def ensure_path(self, path: Union[str, Path]) -> None:
+        """Create an absolute path if it doesn't exist."""
         ...
 
     @abstractmethod
-    def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
+    def iterdir(self, path: Union[str, Path]) -> Union[Iterator[Path], list]:
+        """Return an iterator through files within a directory indicated by path
+        or an empty list if the path doesn't exist.
+        """
         ...
 
     @abstractmethod
     def rmdir(self, path: Union[str, Path]) -> None:
+        """Remove a directory. Silently pass if it doesn't exist."""
         ...
 
     @abstractmethod
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
+        """Get file last modified time."""
         ...
 
     @abstractmethod
     def atime(self, path: Union[str, Path]) -> dt.datetime:
+        """Get file last accessed time."""
         ...
 
     @abstractmethod
     def size(self, path: Union[str, Path]) -> int:
+        """Get the size in bytes for a file or a directory indicated by path.
+        Zero if the path doesn't exist.
+        """
         ...
 
     @abstractmethod
     def delete(self, path: Union[str, Path]) -> None:
+        """Remove file or raise FileNotFoundError if not found."""
         ...
 
 
@@ -128,11 +149,12 @@ class LocalFileStorage(FileStorage):
     def ensure_path(self, path: Union[str, Path]) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
-    def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
-        return path.iterdir()
+    def iterdir(self, path: Union[str, Path]) -> Union[Iterator[Path], list]:
+        return path.iterdir() if path.exists() else []
 
     def rmdir(self, path: Union[str, Path]) -> None:
-        path.rmdir()
+        if path.exists():
+            path.rmdir()
 
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
         return dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
@@ -141,7 +163,7 @@ class LocalFileStorage(FileStorage):
         return dt.datetime.fromtimestamp(path.stat().st_atime, tz=dt.timezone.utc)
 
     def size(self, path: Union[str, Path]) -> int:
-        return path.stat().st_size
+        return path.stat().st_size if path.exists() else 0
 
     def delete(self, path: Union[str, Path]) -> None:
         path.unlink()
@@ -166,37 +188,35 @@ class GoogleCloudStorage(FileStorage):
         )
 
     def read_file(self, path: Union[str, Path]) -> bytes:
-        with self.fs.open(path, "rb") as f:
+        with self.fs.open(str(path), "rb") as f:
             return f.read()
 
     def write_file(self, path: Union[str, Path], data: bytes) -> None:
-        with self.fs.open(path, "wb") as f:
+        with self.fs.open(str(path), "wb") as f:
             f.write(data)
 
     def ensure_path(self, path: Union[str, Path]) -> None:
-        if not self.fs.exists(path):
-            self.fs.makedirs(path, exist_ok=True)
+        if not self.fs.exists(str(path)):
+            self.fs.makedirs(str(path), exist_ok=True)
 
     def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
-        return self.fs.ls(path)
+        return self.fs.ls(str(path)) if self.fs.exists(str(path)) else []
 
     def rmdir(self, path: Union[str, Path]) -> None:
-        self.fs.rm(path)
+        self.fs.rm(str(path))
 
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
-        mtime = self.fs.info(path)["updated"]
+        mtime = self.fs.info(str(path))["updated"]
         ts = dt.datetime.strptime(mtime.split(".")[0], "%Y-%m-%dT%H:%M:%S")
         ts = ts.replace(tzinfo=dt.timezone.utc, microsecond=int(mtime[-4:-1]))
         return ts
 
     def atime(self, path: Union[str, Path]) -> dt.datetime:
-        return self.mtime(path)
+        # fall back to mtime because last accessed (atime) is not available for GCS
+        return self.mtime(str(path))
 
     def size(self, path: Union[str, Path]) -> int:
-        return self.fs.info(path)["size"]
+        return self.fs.info(str(path))["size"] if self.fs.exists(str(path)) else 0
 
     def delete(self, path: Union[str, Path]) -> None:
-        self.fs.rm(path)
-
-    def clear(self):
-        self.fs.rm(self.location.as_posix())
+        self.fs.rm(str(path))
