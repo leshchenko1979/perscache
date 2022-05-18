@@ -77,44 +77,65 @@ class FileStorage(Storage):
             self.delete(f)
 
     def clear(self) -> None:
+        """Remove the directory with the cache along with all of its contents
+        if it exists, otherwise just silently passes with no exceptions.
+        """
+
         for f in self.iterdir(self.location):
             self.delete(f)
         self.rmdir(self.location)
 
     @abstractmethod
     def read_file(self, path: Union[str, Path]) -> bytes:
+        """Read a file at a relative path inside the cache
+        or raise FileNotFoundError if not found.
+        """
         ...
 
     @abstractmethod
     def write_file(self, path: Union[str, Path]) -> bytes:
+        """Write a file at a relative path inside the cache
+        or raise FileNotFoundError if the cache directory doesn't exist.
+        """
         ...
 
     @abstractmethod
     def ensure_path(self, path: Union[str, Path]) -> None:
+        """Create an absolute path if it doesn't exist."""
         ...
 
     @abstractmethod
-    def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
+    def iterdir(self, path: Union[str, Path]) -> Union[Iterator[Path], list]:
+        """Return an iterator through files within a directory indicated by path
+        or an empty list if the path doesn't exist.
+        """
         ...
 
     @abstractmethod
     def rmdir(self, path: Union[str, Path]) -> None:
+        """Remove a directory. Silently pass if it doesn't exist."""
         ...
 
     @abstractmethod
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
+        """Get file last modified time."""
         ...
 
     @abstractmethod
     def atime(self, path: Union[str, Path]) -> dt.datetime:
+        """Get file last accessed time."""
         ...
 
     @abstractmethod
     def size(self, path: Union[str, Path]) -> int:
+        """Get the size in bytes for a file or a directory indicated by path.
+        Zero if the path doesn't exist.
+        """
         ...
 
     @abstractmethod
     def delete(self, path: Union[str, Path]) -> None:
+        """Remove file or raise FileNotFoundError if not found."""
         ...
 
 
@@ -128,11 +149,12 @@ class LocalFileStorage(FileStorage):
     def ensure_path(self, path: Union[str, Path]) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
-    def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
-        return path.iterdir()
+    def iterdir(self, path: Union[str, Path]) -> Union[Iterator[Path], list]:
+        return path.iterdir() if path.exists() else []
 
     def rmdir(self, path: Union[str, Path]) -> None:
-        path.rmdir()
+        if path.exists():
+            path.rmdir()
 
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
         return dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
@@ -141,7 +163,7 @@ class LocalFileStorage(FileStorage):
         return dt.datetime.fromtimestamp(path.stat().st_atime, tz=dt.timezone.utc)
 
     def size(self, path: Union[str, Path]) -> int:
-        return path.stat().st_size
+        return path.stat().st_size if path.exists() else 0
 
     def delete(self, path: Union[str, Path]) -> None:
         path.unlink()
@@ -178,10 +200,12 @@ class GoogleCloudStorage(FileStorage):
             self.fs.makedirs(path, exist_ok=True)
 
     def iterdir(self, path: Union[str, Path]) -> Iterator[Path]:
-        return self.fs.ls(path)
+        return self.fs.ls(path) if self.fs.exists(path) else []
 
     def rmdir(self, path: Union[str, Path]) -> None:
-        self.fs.rm(path)
+        # str(path) is needed to prevent a bug in gcsfs ver. 22022.3.0:
+
+        self.fs.rm(str(path))
 
     def mtime(self, path: Union[str, Path]) -> dt.datetime:
         mtime = self.fs.info(path)["updated"]
@@ -193,10 +217,7 @@ class GoogleCloudStorage(FileStorage):
         return self.mtime(path)
 
     def size(self, path: Union[str, Path]) -> int:
-        return self.fs.info(path)["size"]
+        return self.fs.info(path)["size"] if self.fs.exists(path) else 0
 
     def delete(self, path: Union[str, Path]) -> None:
         self.fs.rm(path)
-
-    def clear(self):
-        self.fs.rm(self.location.as_posix())

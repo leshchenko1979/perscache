@@ -45,13 +45,15 @@ def test_basic(cache):
     assert counter == 1
 
 
-@pytest.mark.parametrize("max_size", [0, 1000, 10_000])
+@pytest.mark.parametrize("max_size", [5_000, 100_000])
 def test_max_size(cache, max_size):
     path: Path = cache.storage.location
 
     cache.storage.max_size = max_size
 
     cache.storage.ensure_path(path)
+    cache.storage.clear()
+
     initial_size = cache.storage.size(path)
 
     counter = 0
@@ -60,7 +62,7 @@ def test_max_size(cache, max_size):
     def get_data(key):
         nonlocal counter
         counter += 1
-        return [counter] * min((max_size // 2), 100)
+        return b'0' * min((max_size // 2), 100)
 
     get_data(1)
     get_data(2)
@@ -103,6 +105,15 @@ def test_ttl(cache):
     get_data(2)
     assert counter == 4
 
+
+def test_clear(cache):
+    cache.storage.write("abc", b"abc")
+    cache.storage.clear()
+
+    assert not list(cache.storage.iterdir(cache.storage.location))
+
+    # Doesn't raise if directory doesn't exist
+    cache.storage.clear()
 
 def test_initialization():
     LocalFileStorage()
