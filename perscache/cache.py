@@ -138,7 +138,7 @@ class NoCache:
     ```
     cache = NoCache() if os.environ["DEBUG"] else Cache()
 
-    @cache.cache
+    @cache
     def function():
         ...
     ```
@@ -147,24 +147,24 @@ class NoCache:
     def __repr__(self) -> str:
         return "<NoCache>"
 
-    @staticmethod
-    def __call__(*decorator_args, **decorator_kwargs):
+    def __call__(self, *decorator_args, **decorator_kwargs):
         """Will call the decorated function every time and
         return its result without any caching.
         """
+        if decorator_args and callable(decorator_args[0]):
+            return self._decorator(decorator_args[0])
+        return self._decorator
 
-        def _decorator(fn):
-            @functools.wraps(fn)
-            def _non_async_wrapper(*args, **kwargs):
-                return fn(*args, **kwargs)
+    def _decorator(self, fn):
+        @functools.wraps(fn)
+        def _non_async_wrapper(*args, **kwargs):
+            return fn(*args, **kwargs)
 
-            @functools.wraps(fn)
-            async def _async_wrapper(*args, **kwargs):
-                return await fn(*args, **kwargs)
+        @functools.wraps(fn)
+        async def _async_wrapper(*args, **kwargs):
+            return await fn(*args, **kwargs)
 
-            return _async_wrapper if is_async(fn) else _non_async_wrapper
-
-        return _decorator
+        return _async_wrapper if is_async(fn) else _non_async_wrapper
 
     cache = __call__  # Alias for backwards compatibility.
 
