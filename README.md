@@ -33,9 +33,12 @@ def get_data():
 ### Caching
 - Easy to swap out the cache configuration when switching environments.
 - Async functions supported.
+- Instance-specific caching for both sync and async class methods.
 - Time-to-live (TTL) support - automatically invalidate cache entries after a certain time.
 - Automatic cache invalidation when the decorated function arguments or code have been changed.
 - You can ignore changes in certain arguments of the decorated function.
+- Each instance of a class maintains its own separate cache.
+- Smart detection of instance methods vs standalone functions.
 
 ### Serialization and storage
 - Various serialization formats: JSON, YAML, pickle, Parquet, CSV etc.
@@ -82,6 +85,49 @@ print(get_data())  # the cache is used
 
 print(counter)  # the function was called only once
 # 1
+```
+
+### Instance Method Caching
+The cache decorator works seamlessly with both regular functions and instance methods:
+
+```python
+class Calculator:
+    def __init__(self):
+        self.compute_count = 0
+
+    @cache
+    def add(self, a: int, b: int) -> int:
+        self.compute_count += 1
+        return a + b
+
+calc1 = Calculator()
+calc2 = Calculator()
+
+# First call computes the result
+result1 = calc1.add(5, 3)  # compute_count = 1
+# Second call uses cache
+result2 = calc1.add(5, 3)  # compute_count still 1
+
+# Different instance gets its own cache
+result3 = calc2.add(5, 3)  # calc2.compute_count = 1
+```
+
+The cache is instance-specific, so different instances of the same class maintain separate caches. This works for both synchronous and asynchronous methods.
+
+### Async Support
+The cache works with async functions and methods:
+
+```python
+@cache
+async def fetch_data(url: str):
+    print("Fetching data...")
+    response = await some_async_request(url)
+    return response
+
+# First call fetches
+data1 = await fetch_data("example.com")
+# Second call uses cache
+data2 = await fetch_data("example.com")
 ```
 
 ### Changing parameters or the code of the function invalidates the cache
