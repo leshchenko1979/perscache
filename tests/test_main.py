@@ -87,24 +87,21 @@ def test_typing(cache):
     with pytest.raises(BeartypeCallHintParamViolation):
 
         @cache(ttl=10)
-        def get_data():
-            ...
+        def get_data(): ...
 
     with pytest.raises(ViolationError):
 
         @cache(ignore=["abc"])
-        def get_data():
-            ...
+        def get_data(): ...
 
     with pytest.raises(ViolationError):
 
         @cache(ttl=dt.timedelta(days=-1))
-        def get_data():
-            ...
+        def get_data(): ...
 
 
 def test_class_method_with_params(cache):
-    from datetime import datetime, timedelta, UTC
+    from datetime import datetime, timedelta
     from pathlib import Path
     from perscache import Cache
     from perscache.storage import LocalFileStorage
@@ -117,11 +114,12 @@ def test_class_method_with_params(cache):
             return f"What: {what}, Timestamp: {when.isoformat()}"
 
     pt = PerscacheTest()
-    pt.cache_method("This thing happened", datetime.now(tz=UTC))
+    pt.cache_method("This thing happened", datetime.now(tz=datetime.UTC))
 
 
 def test_sync_class_method(cache):
     """Test that sync class methods work correctly with caching."""
+
     class Calculator:
         def __init__(self):
             self.compute_count = 0
@@ -146,6 +144,7 @@ def test_sync_class_method(cache):
 
 def test_sync_class_method_multiple_instances(cache):
     """Test that caches for different instances of the same class don't clash."""
+
     class Counter:
         def __init__(self, id: str):
             self.id = id
