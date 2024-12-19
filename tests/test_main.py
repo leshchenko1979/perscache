@@ -101,7 +101,7 @@ def test_typing(cache):
 
 
 def test_class_method_with_params(cache):
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from pathlib import Path
     from perscache import Cache
     from perscache.storage import LocalFileStorage
@@ -114,7 +114,7 @@ def test_class_method_with_params(cache):
             return f"What: {what}, Timestamp: {when.isoformat()}"
 
     pt = PerscacheTest()
-    pt.cache_method("This thing happened", datetime.now(tz=datetime.UTC))
+    pt.cache_method("This thing happened", datetime.now(tz=timezone.utc))
 
 
 def test_sync_class_method(cache):
