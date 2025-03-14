@@ -95,10 +95,15 @@ class Calculator:
     def __init__(self):
         self.compute_count = 0
 
-    @cache
+    @cache  # Default per_instance=True
     def add(self, a: int, b: int) -> int:
         self.compute_count += 1
         return a + b
+
+    @cache(per_instance=False)  # Share cache between instances
+    def multiply(self, a: int, b: int) -> int:
+        self.compute_count += 1
+        return a * b
 
 calc1 = Calculator()
 calc2 = Calculator()
@@ -110,9 +115,14 @@ result2 = calc1.add(5, 3)  # compute_count still 1
 
 # Different instance gets its own cache
 result3 = calc2.add(5, 3)  # calc2.compute_count = 1
+
+# Shared cache between instances
+result4 = calc1.multiply(4, 2)  # compute_count = 2
+# Second instance uses the same cache
+result5 = calc2.multiply(4, 2)  # compute_count still 2
 ```
 
-The cache is instance-specific, so different instances of the same class maintain separate caches. This works for both synchronous and asynchronous methods.
+By default, each instance maintains its own cache (`per_instance=True`). However, you can set `per_instance=False` to share the cache between all instances of a class. This works for both synchronous and asynchronous methods.
 
 ### Async Support
 The cache works with async functions and methods:

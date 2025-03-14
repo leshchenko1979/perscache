@@ -65,6 +65,7 @@ class Cache:
         serializer: Optional[Serializer] = None,
         storage: Optional[Storage] = None,
         ttl: Optional[dt.timedelta] = None,
+        per_instance: bool = True,
     ):
         """Cache the value of the wrapped function.
 
@@ -83,13 +84,15 @@ class Cache:
                     Defaults to None.
             ttl: The expiration time of the cache. If None, the cache will never expire.
                     Defaults to None.
+            per_instance: Whether to create a separate cache for each instance of a class.
+                    Defaults to True.
         """
 
         if isinstance(ignore, str):
             ignore = [ignore]
 
         wrapper = _CachedFunction(
-            self, ignore, serializer or self.serializer, storage or self.storage, ttl
+            self, ignore, serializer or self.serializer, storage or self.storage, ttl, per_instance
         )
 
         # The decorator should work both with and without parentheses
@@ -119,40 +122,38 @@ class Cache:
         serializer: Serializer,
         ignore: Iterable[str],
         instance_id: Optional[int] = None,
+        per_instance: bool = True,
     ) -> str:
         debug("Generating hash for function: %s", fn.__name__)
 
         # Get source code from the function
         source = inspect.getsource(fn)
-        debug("Function source hash input: %s", source[:100] + "..." if len(source) > 100 else source)
+        debug(
+            "Function source hash input: %s",
+            f"{source[:100]}..." if len(source) > 100 else source,
+        )
 
         # Build argument dictionary
         arg_dict = {}
         params = list(inspect.signature(fn).parameters.values())
-
-        # Get list of parameters to ignore
         ignore_set = set(ignore) if ignore is not None else set()
         debug("Ignoring parameters: %s", ignore_set)
 
-        # Process arguments, skipping ignored ones
-        param_index = 0
-        for param in params:
-            if param.name not in ignore_set:
-                if param_index < len(args):
-                    arg_dict[param.name] = args[param_index]
+        # Process arguments, skipping ignored ones and self when per_instance=False
+        start_idx = 1 if instance_id is not None else 0
+        for i, param in enumerate(params[start_idx:], start=start_idx):
+            if param.name not in ignore_set and (per_instance or param.name != 'self'):
+                if i < len(args):
+                    arg_dict[param.name] = args[i]
                 elif param.name in kwargs:
                     arg_dict[param.name] = kwargs[param.name]
-            param_index += 1
 
         debug("Final argument dictionary: %s", arg_dict)
 
         # Build hash components
-        hash_components = [source, type(serializer).__name__]
-        if instance_id is not None:
-            # For instance methods, add instance ID before arguments
-            hash_components.extend([instance_id, arg_dict])
-        else:
-            hash_components.append(arg_dict)
+        hash_components = [source, type(serializer).__name__, arg_dict]
+        if instance_id is not None and per_instance:
+            hash_components.insert(0, str(instance_id))
 
         hash_value = hash_it(*hash_components)
         debug("Generated hash: %s", hash_value)
@@ -161,7 +162,6 @@ class Cache:
     def _get_filename(self, fn: Callable, key: str, serializer: Serializer) -> str:
         if inspect.ismethod(fn):
             class_name = fn.__self__.__class__.__name__
-            instance_id = id(fn.__self__)
             filename = f"{class_name}.{fn.__name__}-{key}.{serializer.extension}"
             debug("Generated instance method cache filename: %s", filename)
             return filename
@@ -209,7 +209,7 @@ class NoCache:
 
 
 class _CachedFunction:
-    """An interal class used as a wrapper."""
+    """An internal class used as a wrapper."""
 
     @beartype
     def __init__(
@@ -219,12 +219,14 @@ class _CachedFunction:
         serializer: Serializer,
         storage: Storage,
         ttl: Optional[dt.timedelta],
+        per_instance: bool = True,
     ):
         self.cache = cache
         self.ignore = ignore
         self.serializer = serializer
         self.storage = storage
         self.ttl = ttl
+        self.per_instance = per_instance
 
     @require(
         lambda self, fn: self.ignore is None
@@ -234,41 +236,40 @@ class _CachedFunction:
     def __call__(self, fn: Callable) -> Callable:
         """Return the correct wrapper."""
 
-        if is_async(fn):
-            @functools.wraps(fn)
-            async def wrapped(*args, **kwargs):
-                # Check if this is an instance method call by looking at the first argument
-                if args and hasattr(type(args[0]), fn.__name__) and not isinstance(args[0], (str, bytes, int, float, bool)):
-                    # Create a bound method
-                    bound_method = types.MethodType(fn, args[0])
-                    return await self._async_wrapper(bound_method, *args, **kwargs)
-                return await self._async_wrapper(fn, *args, **kwargs)
-        else:
+        def is_instance_method(args):
+            return (args and hasattr(type(args[0]), fn.__name__)
+                   and not isinstance(args[0], (str, bytes, int, float, bool)))
+
+        def create_wrapper(is_async_wrapper):
             @functools.wraps(fn)
             def wrapped(*args, **kwargs):
-                # Check if this is an instance method call by looking at the first argument
-                if args and hasattr(type(args[0]), fn.__name__) and not isinstance(args[0], (str, bytes, int, float, bool)):
-                    # Create a bound method
+                if is_instance_method(args):
                     bound_method = types.MethodType(fn, args[0])
-                    return self._non_async_wrapper(bound_method, *args, **kwargs)
-                return self._non_async_wrapper(fn, *args, **kwargs)
+                    instance_id = id(args[0]) if self.per_instance else None
+                    return (is_async_wrapper(bound_method, instance_id, *args, **kwargs)
+                           if is_async_wrapper else
+                           self._non_async_wrapper(bound_method, instance_id, *args, **kwargs))
+                return (is_async_wrapper(fn, None, *args, **kwargs)
+                       if is_async_wrapper else
+                       self._non_async_wrapper(fn, None, *args, **kwargs))
+            return wrapped
 
-        return wrapped
+        if is_async(fn):
+            return create_wrapper(self._async_wrapper)
+        return create_wrapper(self._non_async_wrapper)
 
-    def _non_async_wrapper(self, fn: Callable, *args, **kwargs):
+    def _non_async_wrapper(self, fn: Callable, instance_id: Optional[int], *args, **kwargs):
         debug("Entering cache wrapper for function: %s", fn.__name__)
         debug("Args: %s, Kwargs: %s", args, kwargs)
 
         # Handle instance methods
         if inspect.ismethod(fn):
             instance = fn.__self__
-            instance_id = id(instance)
             debug("Detected instance method - class: %s, instance_id: %s",
                   instance.__class__.__name__, instance_id)
             # Get the underlying function and skip self parameter
             func = fn.__func__
-            args = args[1:]  # Remove self from args
-            key = self.cache._get_hash(func, args, kwargs, self.serializer, self.ignore, instance_id)
+            key = self.cache._get_hash(func, args, kwargs, self.serializer, self.ignore, instance_id, self.per_instance)
         else:
             debug("Detected standalone function")
             key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
@@ -281,25 +282,27 @@ class _CachedFunction:
             return result
         except (FileNotFoundError, CacheExpired) as exception:
             debug("Cache miss for %s: %s", fn.__name__, exception)
-            value = fn(*args, **kwargs)
+            # For bound methods, skip the first argument (self)
+            if inspect.ismethod(fn):
+                value = fn(*args[1:], **kwargs)
+            else:
+                value = fn(*args, **kwargs)
             debug("Caching new value for key: %s", key)
             self.cache._set(key, value, self.serializer, self.storage)
             return value
 
-    async def _async_wrapper(self, fn: Callable, *args, **kwargs):
+    async def _async_wrapper(self, fn: Callable, instance_id: Optional[int], *args, **kwargs):
         debug("Entering async cache wrapper for function: %s", fn.__name__)
         debug("Args: %s, Kwargs: %s", args, kwargs)
 
         # Handle instance methods
         if inspect.ismethod(fn):
             instance = fn.__self__
-            instance_id = id(instance)
             debug("Detected instance method - class: %s, instance_id: %s",
                   instance.__class__.__name__, instance_id)
             # Get the underlying function and skip self parameter
             func = fn.__func__
-            args = args[1:]  # Remove self from args
-            key = self.cache._get_hash(func, args, kwargs, self.serializer, self.ignore, instance_id)
+            key = self.cache._get_hash(func, args, kwargs, self.serializer, self.ignore, instance_id, self.per_instance)
         else:
             debug("Detected standalone function")
             key = self.cache._get_hash(fn, args, kwargs, self.serializer, self.ignore)
@@ -312,7 +315,11 @@ class _CachedFunction:
             return result
         except (FileNotFoundError, CacheExpired) as exception:
             debug("Cache miss for %s: %s", fn.__name__, exception)
-            value = await fn(*args, **kwargs)
+            # For bound methods, skip the first argument (self)
+            if inspect.ismethod(fn):
+                value = await fn(*args[1:], **kwargs)
+            else:
+                value = await fn(*args, **kwargs)
             debug("Caching new value for key: %s", key)
             self.cache._set(key, value, self.serializer, self.storage)
             return value

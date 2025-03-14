@@ -1,4 +1,3 @@
-
 # `perscache` API Reference
 - [Base classes](#base-classes)
 - [Serializers](#serializers)
@@ -41,6 +40,28 @@ logging.getLogger('perscache').addHandler(logging.StreamHandler())
 - `storage (perscache.storage.Storage)`: Overrides the default `Cache()` storage. Defaults to `None`.
 
 - `ttl (datetime.timedelta)`: The time-to-live of the cache for the decorated function. If `None`, the cache never exprires. Defaults to `None`.
+
+- `per_instance (bool)`: Whether to create a separate cache for each instance of a class. When `True` (default), each instance maintains its own cache. When `False`, all instances of a class share the same cache. This parameter only affects instance methods. Defaults to `True`.
+
+Example with shared cache:
+```python
+class DataFetcher:
+    def __init__(self):
+        self.compute_count = 0
+
+    @cache(per_instance=False)  # Share cache between instances
+    def fetch_data(self, key: str) -> str:
+        self.compute_count += 1
+        return f"Fetched data for key: {key}"
+
+fetcher1 = DataFetcher()
+fetcher2 = DataFetcher()
+
+# First instance computes and caches
+result1 = fetcher1.fetch_data("test_key")  # compute_count = 1
+# Second instance uses the same cache
+result2 = fetcher2.fetch_data("test_key")  # compute_count still 1
+```
 
 ### class `perscache.NoCache()`
 This class has no parameters. It is useful to [alternate cache behaviour depending on the environment](../README.md#alternating-cache-settings-depending-on-the-environment).
